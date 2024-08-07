@@ -720,7 +720,7 @@ ${prompt}`;
 	}
 }
 if (typeof window === 'undefined') {
-	downloadVersions(versions, 'websim-version', 'oregano.html');
+	downloadVersions(versions, '.', 'index.html');
 } else {
 	collectVersionsInteractively();
 }
