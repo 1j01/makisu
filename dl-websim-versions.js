@@ -33,6 +33,8 @@
 // Could add a cancel button. Could add a start button too, so the page is likely focused when you try to press Esc.
 // Could also move the overlay to the bottom of the screen since the version list is near the top.
 
+// TODO: handle "!continue" prompts, which are used to continue output when it's too long.
+
 async function collectAllVersions(versionListDivSelector, promptSelector) {
 	const aggregatedResults = [];
 
@@ -527,143 +529,183 @@ const versions = [
 	{
 		"prompt": "Sushi simulator with sticky rice particle physics and nori sheets",
 		"id": "aYS0oemyQkAhdvfdy",
-		"commitSummary": "Initial sushi simulator with sticky rice and nori physics."
+		"commitSummary": "Initial websim sushi simulator (2D)",
 	},
 	{
 		"prompt": "3d sushi simulator",
 		"id": "PBibS6LguLdjvyogC",
-		"commitSummary": "Implement 3D sushi simulator."
+		"commitSummary": "Implement 3D sushi simulator",
 	},
 	{
 		"prompt": "clicked: ```<button id=\"add-rice\" w-tid=\"10\" class=\"\">Add Rice</button>```",
 		"id": "aOuSM8GZU8lt56hjV",
-		"commitSummary": "Handle 'Add Rice' button click event."
+		"commitSummary": "Add some rice at start, and tweak rice color",
+		"commitNote": `Note: I wasn't sure how I triggered this, but apparently
+this is what the Delve option in WebSim's context menu does.`,
 	},
 	{
 		"prompt": "The seaweed needs to be flexible",
 		"id": "saMr81ojFUtVtd2dP",
-		"commitSummary": "Make seaweed flexible."
+		"commitSummary": "Make seaweed flexible",
 	},
 	{
 		"prompt": "Add a toolbar with tools for camera and interaction",
 		"id": "cCBDq7xtM3iTJdqNZ",
-		"commitSummary": "Add toolbar with camera and interaction tools."
+		"commitSummary": "Add toolbar with camera and interaction tools",
 	},
 	{
 		"prompt": "- Remove \"roll sushi\" which doesn't do what it says.\n- Remove object count limits.\n- Style the UI consistently. I like the toolbar styles.",
 		"id": "X3CDscjpnC0dVjGSJ",
-		"commitSummary": "Remove 'roll sushi' and object limits; style UI."
+		"commitSummary": "Remove 'roll sushi' and object limits; style UI (WARNING: infinite rice)",
+		"commitNote": `Note: I didn't mean to remove the limit of rice added initially,
+but technically, that is an "object count limit". Sigh.`,
 	},
 	{
 		"prompt": "Only add 100 grains of rice at a time.\nMake rice stick together.",
 		"id": "5oNpolAWpNUEU9mQg",
-		"commitSummary": "Limit to 100 rice grains; make rice sticky."
+		"commitSummary": "Don't indefinitely add rice; try to make rice sticky",
+		"commitNote": `Note: The AI decided to try to clump rice together when spawning a grain...
+not when they collide.`,
 	},
 	{
 		"prompt": "- Remove \"100 grains\" text\n- Add cursors during interaction\n- Fix object interaction (nothing is happening)\n- Fix panning/zooming tools (reconfigure touch and mouse mappings instead of disabling features; and MMB should always rotate regardless of tool selected)",
 		"id": "ZjKuJAH9Tu92wCGaI",
-		"commitSummary": "Update UI, fix interactions and camera controls."
+		"commitSummary": "Update UI, try to fix interactions and camera controls",
 	},
 	{
 		"prompt": "- LMB should not rotate the camera with interact/delete tools selected\n- Interact and delete tools still aren't working",
 		"id": "olbZfQJusJud5OBFA",
-		"commitSummary": "Fix LMB camera rotation and tool interactions."
+		"commitSummary": "Try to fix tool interactions",
 	},
 	{
 		"prompt": "- Add debug visualization for the interaction tools\n- Make the ground tan like wood\n- Make the ground plane very very large (effectively infinite but not infinity)",
 		"id": "8VTA3fKlj94vGFAfx",
-		"commitSummary": "Add debug viz, tan wooden ground, large ground plane."
+		"commitSummary": "Add debug viz; make ground infinite and tan",
 	},
 	{
 		"prompt": "- Prevent raycasting to the debug visualization\n- Highlight the object under the cursor with emissive color for debugging",
 		"id": "jt38cuNdDrP4wMqvu",
-		"commitSummary": "Prevent debug viz raycasting; highlight objects."
+		"commitSummary": "Prevent raycasting to debug viz mesh; highlight objects",
 	},
 	{
 		"prompt": "- Visualize the drag plane\n- Use a shared function for updating the mouse and raycasting, to eliminate a possible source of errors",
 		"id": "wuKgn3S392eOeeMHP",
-		"commitSummary": "Visualize drag plane; unify mouse update function."
+		"commitSummary": "Visualize drag plane*; unify mouse update function",
+		"commitNote": "Note: *The drag plane is visualized incorrectly, oriented perpendicular.",
 	},
 	{
 		"prompt": "Use pointer events",
 		"id": "0volgxS2KXTah1cSX",
-		"commitSummary": "Switch to pointer events."
+		"commitSummary": "Switch to pointer events, fixing tool interaction",
+		"commitNote": `Note: This fixes tool interaction as well as starting to add touch support.
+I didn't determine exactly why it wasn't working, but the mouse handler wasn't called.
+I guessed that it could be some other mouse event handler interfering,
+and I thought of pointer events as a possible workaround, and it indeed worked.`,
 	},
 	{
 		"prompt": "- Prevent raycasting to the drag plane mesh\n- Fix the drag plane orientation",
 		"id": "gZVzrw53ZxxU6n0dO",
-		"commitSummary": "Fix drag plane mesh raycasting and orientation."
+		"commitSummary": "Prevent raycasting to drag plane viz, and try to fix its orientation*",
+		"commitNote": `Note: *The drag plane is still not oriented correctly,
+and it's much more dubious now, how it's orienting it.`,
 	},
 	{
 		"prompt": "Disable debug visualization by default, but make it an option",
 		"id": "vxZmguF3Hs3UbW9GB",
-		"commitSummary": "Make debug viz optional and disabled by default."
+		"commitSummary": "Make debug viz optional and disabled by default",
 	},
 	{
 		"prompt": "- Do drag interaction during animation loop, not just on mouse move, so it doesn't fall when not moving the mouse.\n- Use standard checkbox control order (move to left of label).\n- Use default, grab, and grabbing cursors depending on the state of the interact tool.\n- Use default cursor for rotate tool.\n- Make the interact tool the default tool.\n- Add a bamboo mat object similar to how the seaweed currently works.",
 		"id": "R7QfbnWlFCCvGvirw",
-		"commitSummary": "Refine drag interaction, cursor states, and add bamboo mat."
+		"commitSummary": "Refine drag interaction, cursor states, and add bamboo mat",
 	},
 	{
 		"prompt": "- If the drag position is below the ground, after projecting to the drag plane, project to the ground plane instead.\n- Add a divider between view tools and other tools.\n- The bamboo mat should work exactly like the seaweed currently does, just a light green instead.\n- The move ingredients tool should use the default cursor when nothing is hovered (and nothing is being dragged)",
 		"id": "p6qm7FAYQXVPCrlsH",
-		"commitSummary": "Improve drag logic, add toolbar divider, refine bamboo mat."
+		"commitSummary": "Improve drag logic, add toolbar divider, refine bamboo mat",
 	},
 	{
 		"prompt": "When rice grains collide with other objects, add a constraint between them. Limit to 8 constraints per grain of rice, and one constraint between pairs of objects. Can store a Set of stuck objects on each grain object... or a Map of objects to constraints.\n\nDon't elide anything with \"// ...\" comments",
 		"id": "COdJlZul2KU3hZdJL",
-		"commitSummary": "Add constraints on rice grain collision."
+		"commitSummary": "Try to make rice sticky with constraints",
+		"commitNote": `Note: The collide event is not listened to correctly;
+it's supposed to be on the body, not the world.`,
 	},
 	{
 		"prompt": "This is how the collide event works:\n\n          // When a body collides with another body, they both dispatch the \"collide\" event.\n          sphereBody.addEventListener(\"collide\",function(e){\n              console.log(\"Collided with body:\",e.body);\n              console.log(\"Contact between bodies:\",e.contact);\n          });",
 		"id": "s1G1xn0sNQQGXDd48",
-		"commitSummary": "Document collide event handling."
+		"commitSummary": "Fix collide event usage",
+		"commitNote": `Note: The AI decided to listen to the event for all object types,
+even though only rice grains should be sticky. The only purpose this serves
+is "justifying" the complexity of the collision handler.`,
 	},
 	{
 		"prompt": "- When dragging rice, select all rice grains within a certain radius of the given rice grain, for dragging.\n- When deleting objects, delete all parts of an object made of multiple parts, or for rice, the rains within a certain radius.", // [sic]
 		"id": "mWz3Cp1yDP72G7kJZ",
-		"commitSummary": "Select nearby rice grains for dragging and deletion."
+		"commitSummary": "Select nearby/related objects for dragging and deletion",
 	},
 	{
 		"prompt": "- Don't grab all fish as one, or all nori sheets or bamboo sheets as one. Just select all the parts of a specific logical object at once.\n- Ensure things don't jump when starting a drag, by storing the offset that things would move at the start of the drag and subtracting it.\n- Break constraints if the `multiplier` of the constraint exceeds some threshold, adjustable in the panel with the debug viz checkbox.",
 		"id": "Rzf3VJ3lG7vwhUd1k",
-		"commitSummary": "Fix object selection and drag offset; break constraints on threshold."
+		"commitSummary": "Fix group dragging; try to break constraints on threshold",
 	},
 	{
 		"prompt": "- If you use the exact logic for calculating the target position of each object to store offsets as is used to move the objects, the objects should not jump when starting to drag them. Right now it's fine for a single object, but a group of objects jumps.\n- Comment out the constraint breaking that uses .multiplier and note that equation.multiplier is only available on canon.js master, not in the latest release. Use distances instead to break constraints.",
 		"id": "DSTVFJPezebvnurNN",
-		"commitSummary": "Prevent jump when dragging objects; adjust constraint breaking logic."
+		"commitSummary": "Fix drag offset and constraint breaking logic",
 	},
 	{
 		"prompt": "Use cannon-es, an ESM version of cannon.js which supports equation.multiplier",
 		"id": "rfxlnOBIYOkHC6bwU",
-		"commitSummary": "Switch to cannon-es for better constraint handling."
+		"commitSummary": "Switch to cannon-es for better constraint breaking (breaks breaking logic)",
 	},
 	{
 		"prompt": "- Pin to cannon-es@0.20.0\n- Add a separate tool for dragging objects by a single object, with a pinching hand icon, if available.\n- Use the `contact` from the collide event to create constraints between the objects.",
 		"id": "swj1vwSD8sLcYIvgt",
-		"commitSummary": "Pin to cannon-es@0.20.0; add single object drag tool."
+		"commitSummary": "Pin to cannon-es@0.20.0; add single object drag tool (breaks constraint creation)",
 	},
 	{
 		"prompt": "Use LockConstraint instead for sticky connections",
 		"id": "yir4SLaz8plVJ8d7r",
-		"commitSummary": "Switch to LockConstraint for sticky connections."
+		"commitSummary": "Switch to LockConstraint for sticky connections (fixes constraints)",
 	},
+	// !continue and prompt before it combined below
+	// {
+	// 	"prompt": "- Simplify drag interaction by using an elevated version of the ground plane as the drag plane, with a configurable height.\n- When starting dragging rice, break connections between the dragged rice and other objects (but keep existing connections within the clump of rice to be dragged).\n- Make rice size configurable.\n- Add Q/E shortcuts to smoothly rotate the dragged group of objects about their center.\n- For touch, during a drag, replace the toolbar with a similarly styled button bar with rotate left and rotate right buttons. Handle pointer events on these buttons instead of click, to smoothly rotate during the drag.",
+	// 	"id": "tKVC5f61W4crfcaC8",
+	// 	"commitSummary": "Simplify drag interaction; add rotation shortcuts and touch controls",
+	// },
+	// {
+	// 	"prompt": "!continue",
+	// 	"id": "8oviZN0oQjkZSFaR2",
+	// 	"commitSummary": "Continue previous implementation",
+	// },
 	{
 		"prompt": "- Simplify drag interaction by using an elevated version of the ground plane as the drag plane, with a configurable height.\n- When starting dragging rice, break connections between the dragged rice and other objects (but keep existing connections within the clump of rice to be dragged).\n- Make rice size configurable.\n- Add Q/E shortcuts to smoothly rotate the dragged group of objects about their center.\n- For touch, during a drag, replace the toolbar with a similarly styled button bar with rotate left and rotate right buttons. Handle pointer events on these buttons instead of click, to smoothly rotate during the drag.",
-		"id": "tKVC5f61W4crfcaC8",
-		"commitSummary": "Simplify drag interaction; add rotation shortcuts and touch controls."
-	},
-	{
-		"prompt": "!continue",
 		"id": "8oviZN0oQjkZSFaR2",
-		"commitSummary": "Continue previous implementation."
+		"commitSummary": "Add rotation controls, rice size option; change drag behavior",
+		"commitNote": `Note:
+- Had to use !continue to finish the output.
+- While the rotation controls where added, the touch was not handled continuously,
+  requiring many many taps to rotate.
+- Connected objects are not rotating about their collective center correctly.
+  This is leading to crumping/twisting/instability.
+- As for the drag plane, it doesn't work as intended,
+  instead dragging directly on the ground, possibly because the
+  drag offset handling is canceling out the lift height.`,
 	},
-	{
-		"prompt": "- For small screens, allow the space between the icons in the toolbar to shrink as needed, and hide settings in a cog icon menu, and adding actions in a plus icon menu. Make these circular buttons with flyouts, rather than modals. Remove the object counts.\n- For touch, configure OrbitControls's `controls.touches` in `setMode`, and make rotation continuous while pressing the rotate left/right buttons.\n- Instead of having a separate drag plane, just project to the ground plane, with a configurable \"lift height\" (default 0.3); smoothly animate lifting objects to this height over a configurable \"lift time\" (default 300ms). Remove debug viz.\n- Highlight objects that will be affected by the current tool (none for camera tools, one for pinch tool, multiple for hand tool) instead of always one mesh.\n- Make sure grabbed objects rotate around their collective center.\n- Add shadows, with a directional light pointing straight down.",
-		"id": "CqvUrOjveBr3hyf3z",
-		"commitSummary": "Improve small screen UI, drag interaction, and add shadows."
-	}
+	// omitting this version as it had significant regressions
+// 	{
+// 		"prompt": "- For small screens, allow the space between the icons in the toolbar to shrink as needed, and hide settings in a cog icon menu, and adding actions in a plus icon menu. Make these circular buttons with flyouts, rather than modals. Remove the object counts.\n- For touch, configure OrbitControls's `controls.touches` in `setMode`, and make rotation continuous while pressing the rotate left/right buttons.\n- Instead of having a separate drag plane, just project to the ground plane, with a configurable \"lift height\" (default 0.3); smoothly animate lifting objects to this height over a configurable \"lift time\" (default 300ms). Remove debug viz.\n- Highlight objects that will be affected by the current tool (none for camera tools, one for pinch tool, multiple for hand tool) instead of always one mesh.\n- Make sure grabbed objects rotate around their collective center.\n- Add shadows, with a directional light pointing straight down.",
+// 		"id": "CqvUrOjveBr3hyf3z",
+// 		"commitSummary": "Improve mobile UI, drag interaction, and add shadows.",
+// 		"commitNote": `Note: I saw significant regressions in this version;
+// The AI may be forgetting things at this scale.
+// Also, it didn't shrink the toolbar "as needed" as I asked,
+// but just compacted it, removing the divider as well. I was hoping for a more flexible layout.
+// It did add the cog and plus icon buttons with menus as requested,
+// although with major contrast issues.`,
+// 	}
 ];
 
 async function downloadVersions(versions, outputDirectory, outputFileName) {
