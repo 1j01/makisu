@@ -1,7 +1,7 @@
 <html><head><base href="https://3dsushimulator.com/">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Sushi Simulator - Sticky Rice</title>
+<title>3D Sushi Simulator - Improved Interactions</title>
 <style>
   body {
     margin: 0;
@@ -65,7 +65,7 @@
 <body>
 <div id="scene-container"></div>
 <div id="ingredient-panel" class="ui-panel">
-  <button id="add-rice" class="button">Add Rice (100 grains)</button>
+  <button id="add-rice" class="button">Add Rice</button>
   <button id="add-nori" class="button">Add Nori</button>
   <button id="add-fish" class="button">Add Fish</button>
   <div id="ingredient-counter">
@@ -95,40 +95,34 @@
   let fishCount = 0;
   let currentMode = 'camera-rotate';
   let selectedObject = null;
+  let isDragging = false;
 
   function init() {
-    // Three.js setup
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementById('scene-container').appendChild(renderer.domElement);
 
-    // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight.position.set(10, 20, 10);
     scene.add(directionalLight);
 
-    // Camera position
     camera.position.set(0, 5, 10);
     camera.lookAt(0, 0, 0);
 
-    // Orbit controls
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
 
-    // Raycaster for object interaction
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
 
-    // Cannon.js world setup
     world = new CANNON.World();
     world.gravity.set(0, -9.82, 0);
 
-    // Create a ground plane
     const groundShape = new CANNON.Plane();
     const groundBody = new CANNON.Body({ mass: 0 });
     groundBody.addShape(groundShape);
@@ -142,12 +136,10 @@
     groundMesh.name = 'ground';
     scene.add(groundMesh);
 
-    // Event listeners
     document.getElementById('add-rice').addEventListener('click', addRiceBatch);
     document.getElementById('add-nori').addEventListener('click', addNori);
     document.getElementById('add-fish').addEventListener('click', addFish);
 
-    // Toolbar event listeners
     document.querySelectorAll('.toolbar-button').forEach(button => {
       button.addEventListener('click', (e) => {
         setMode(e.currentTarget.id);
@@ -168,28 +160,40 @@
     });
     document.getElementById(mode).classList.add('active');
 
+    // Update cursor style
     switch (mode) {
       case 'camera-rotate':
-        controls.enableRotate = true;
-        controls.enablePan = false;
-        controls.enableZoom = false;
+        renderer.domElement.style.cursor = 'grab';
         break;
       case 'camera-pan':
-        controls.enableRotate = false;
-        controls.enablePan = true;
-        controls.enableZoom = false;
+        renderer.domElement.style.cursor = 'move';
         break;
       case 'camera-zoom':
-        controls.enableRotate = false;
-        controls.enablePan = false;
-        controls.enableZoom = true;
+        renderer.domElement.style.cursor = 'zoom-in';
         break;
       case 'interact-move':
-      case 'interact-delete':
-        controls.enableRotate = false;
-        controls.enablePan = false;
-        controls.enableZoom = false;
+        renderer.domElement.style.cursor = 'pointer';
         break;
+      case 'interact-delete':
+        renderer.domElement.style.cursor = 'crosshair';
+        break;
+    }
+
+    // Reconfigure controls
+    controls.enableRotate = true;
+    controls.enablePan = true;
+    controls.enableZoom = true;
+
+    controls.mouseButtons = {
+      LEFT: THREE.MOUSE.ROTATE,
+      MIDDLE: THREE.MOUSE.ROTATE,
+      RIGHT: THREE.MOUSE.PAN
+    };
+
+    if (mode === 'camera-pan') {
+      controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
+    } else if (mode === 'camera-zoom') {
+      controls.mouseButtons.LEFT = THREE.MOUSE.DOLLY;
     }
   }
 
@@ -204,6 +208,8 @@
     if (intersects.length > 0) {
       if (currentMode === 'interact-move') {
         selectedObject = intersects[0].object;
+        isDragging = true;
+        controls.enabled = false;
       } else if (currentMode === 'interact-delete') {
         const deletedObject = intersects[0].object;
         const index = sushiIngredients.findIndex(item => item.mesh === deletedObject);
@@ -227,7 +233,7 @@
   }
 
   function onMouseMove(event) {
-    if (currentMode === 'interact-move' && selectedObject) {
+    if (isDragging && selectedObject) {
       mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
       raycaster.setFromCamera(mouse, camera);
@@ -245,7 +251,9 @@
   }
 
   function onMouseUp() {
+    isDragging = false;
     selectedObject = null;
+    controls.enabled = true;
   }
 
   function addRiceBatch() {
@@ -267,7 +275,6 @@
       position: new CANNON.Vec3(Math.random() * 2 - 1, 5 + Math.random() * 2, Math.random() * 2 - 1)
     });
 
-    // Add friction and restitution for stickiness
     riceBody.material = new CANNON.Material({ friction: 0.5, restitution: 0.1 });
 
     scene.add(riceMesh);
@@ -277,8 +284,7 @@
     riceCount++;
     updateIngredientCounter();
 
-    // Add constraints to nearby rice grains
-    const maxDistance = 0.12; // Maximum distance for rice grains to stick together
+    const maxDistance = 0.12;
     sushiIngredients.forEach(ingredient => {
       if (ingredient.type === 'rice' && ingredient.body !== riceBody) {
         const distance = riceBody.position.distanceTo(ingredient.body.position);
@@ -296,7 +302,6 @@
     const noriDepth = 1;
     const segments = 10;
 
-    // Create flexible nori sheet using a series of connected boxes
     for (let i = 0; i < segments; i++) {
       const segmentWidth = noriWidth / segments;
       const segmentGeometry = new THREE.BoxGeometry(segmentWidth, noriHeight, noriDepth);
