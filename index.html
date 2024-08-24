@@ -1,7 +1,7 @@
 <html><head><base href="https://3dsushimulator.com/">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Sushi Simulator</title>
+<title>3D Sushi Simulator - Adding Rice</title>
 <style>
   body {
     margin: 0;
@@ -30,15 +30,20 @@
     font-size: 14px;
     cursor: pointer;
   }
+  #rice-counter {
+    margin-top: 10px;
+    font-weight: bold;
+  }
 </style>
 </head>
 <body>
 <div id="scene-container"></div>
 <div id="ui-container">
-  <button id="add-rice">Add Rice</button>
+  <button id="add-rice" disabled>Add Rice</button>
   <button id="add-nori">Add Nori</button>
   <button id="add-fish">Add Fish</button>
   <button id="roll-sushi">Roll Sushi</button>
+  <div id="rice-counter">Rice grains: 0</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -48,6 +53,8 @@
 <script>
   let scene, camera, renderer, world, timeStep = 1 / 60;
   let sushiIngredients = [];
+  let riceCount = 0;
+  const MAX_RICE = 100;
 
   function init() {
     // Three.js setup
@@ -100,13 +107,15 @@
   }
 
   function addRice() {
-    const riceGeometry = new THREE.SphereGeometry(0.1, 8, 8);
-    const riceMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    if (riceCount >= MAX_RICE) return;
+
+    const riceGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+    const riceMaterial = new THREE.MeshStandardMaterial({ color: 0xfffaf0 });
     const riceMesh = new THREE.Mesh(riceGeometry, riceMaterial);
 
-    const riceShape = new CANNON.Sphere(0.1);
+    const riceShape = new CANNON.Sphere(0.05);
     const riceBody = new CANNON.Body({
-      mass: 0.1,
+      mass: 0.01,
       shape: riceShape,
       position: new CANNON.Vec3(Math.random() * 2 - 1, 5, Math.random() * 2 - 1)
     });
@@ -114,6 +123,22 @@
     scene.add(riceMesh);
     world.addBody(riceBody);
     sushiIngredients.push({ mesh: riceMesh, body: riceBody, type: 'rice' });
+
+    riceCount++;
+    updateRiceCounter();
+
+    // Add multiple rice grains at once
+    if (riceCount % 10 === 0) {
+      for (let i = 0; i < 9; i++) {
+        setTimeout(addRice, i * 50);
+      }
+    }
+  }
+
+  function updateRiceCounter() {
+    document.getElementById('rice-counter').textContent = `Rice grains: ${riceCount}`;
+    const addRiceButton = document.getElementById('add-rice');
+    addRiceButton.disabled = riceCount >= MAX_RICE;
   }
 
   function addNori() {
@@ -176,5 +201,10 @@
   });
 
   init();
+  
+  // Simulate clicking the "Add Rice" button
+  for (let i = 0; i < 10; i++) {
+    setTimeout(addRice, i * 100);
+  }
 </script>
 </body></html>
