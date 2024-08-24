@@ -33,8 +33,6 @@
 // Could add a cancel button. Could add a start button too, so the page is likely focused when you try to press Esc.
 // Could also move the overlay to the bottom of the screen since the version list is near the top.
 
-// TODO: handle "!continue" prompts, which are used to continue output when it's too long.
-
 async function collectAllVersions(versionListDivSelector, promptSelector) {
 	const aggregatedResults = [];
 
@@ -144,6 +142,99 @@ async function collectAllVersions(versionListDivSelector, promptSelector) {
 	return aggregatedResults;
 }
 
+function handleContinuePrompts(websimVersions) {
+	const versionsForGit = [];
+	let currentVersion = null;
+	for (const { prompt, id, commitNote } of websimVersions) {
+		if (prompt === "!continue" && currentVersion) {
+			currentVersion.id = id;
+			const noteAboutContinue = "Note: used !continue to complete the output.";
+			currentVersion.commitNote = currentVersion.commitNote
+				? (
+					currentVersion.commitNote.startsWith(noteAboutContinue) ?
+						currentVersion.commitNote
+						: `${noteAboutContinue}\n${currentVersion.commitNote}`
+				)
+				: noteAboutContinue;
+		} else {
+			currentVersion = { prompt, id, commitNote };
+			versionsForGit.push(currentVersion);
+		}
+	}
+	return versionsForGit;
+}
+
+// Test cases
+function runTests() {
+	// Test 1: Basic functionality
+	let input = [
+		{ prompt: "First prompt", id: 1 },
+		{ prompt: "!continue", id: 2 },
+		{ prompt: "Second prompt", id: 3 }
+	];
+	let expectedOutput = [
+		{ prompt: "First prompt", id: 2, commitNote: "Note: used !continue to complete the output." },
+		{ prompt: "Second prompt", id: 3 }
+	];
+	let output = handleContinuePrompts(input);
+	console.assert(JSON.stringify(output) === JSON.stringify(expectedOutput), "Test 1 Failed");
+
+	// Test 2: No !continue prompts
+	input = [
+		{ prompt: "First prompt", id: 1 },
+		{ prompt: "Second prompt", id: 2 }
+	];
+	expectedOutput = [
+		{ prompt: "First prompt", id: 1 },
+		{ prompt: "Second prompt", id: 2 }
+	];
+	output = handleContinuePrompts(input);
+	console.assert(JSON.stringify(output) === JSON.stringify(expectedOutput), "Test 2 Failed");
+
+	// Test 3: Multiple !continue prompts in a row
+	input = [
+		{ prompt: "First prompt", id: 1 },
+		{ prompt: "!continue", id: 2 },
+		{ prompt: "!continue", id: 3 },
+		{ prompt: "Second prompt", id: 4 }
+	];
+	expectedOutput = [
+		{ prompt: "First prompt", id: 3, commitNote: "Note: used !continue to complete the output." },
+		{ prompt: "Second prompt", id: 4 }
+	];
+	output = handleContinuePrompts(input);
+	console.assert(JSON.stringify(output) === JSON.stringify(expectedOutput), "Test 3 Failed");
+
+	// Test 4: !continue at the start
+	// If the list of versions is incomplete, but you want to download from it anyway,
+	// it should include the first prompt, even if it's a !continue prompt.
+	input = [
+		{ prompt: "!continue", id: 1 },
+		{ prompt: "First prompt", id: 2 }
+	];
+	expectedOutput = [
+		{ prompt: "!continue", id: 1 },
+		{ prompt: "First prompt", id: 2 }
+	];
+	output = handleContinuePrompts(input);
+	console.assert(JSON.stringify(output) === JSON.stringify(expectedOutput), "Test 4 Failed");
+
+	// Test 5: Preserving commit notes
+	input = [
+		{ prompt: "First prompt", id: 1, commitNote: "Note 1" },
+		{ prompt: "!continue", id: 2, commitNote: "Note 2" },
+		{ prompt: "Second prompt", id: 3, commitNote: "Note 3" }
+	];
+	expectedOutput = [
+		{ prompt: "First prompt", id: 2, commitNote: "Note: used !continue to complete the output.\nNote 1" },
+		{ prompt: "Second prompt", id: 3, commitNote: "Note 3" }
+	];
+	output = handleContinuePrompts(input);
+	console.assert(JSON.stringify(output) === JSON.stringify(expectedOutput), "Test 5 Failed");
+}
+
+runTests();
+
 function openVersionList() {
 	// mouseup is what actually does it, but don't tell anyone
 	const addressBar = document.querySelector("[name='url']");
@@ -189,16 +280,20 @@ function buildQuerySelector(elem, relativeToParent = document.body) {
 
 
 // Add commit summaries (can be improved with ChatGPT or manual editing before committing)
-function addCommitSummaries(results) {
+function addCommitSummaries(results, placeholder) {
 	return results.map(({ prompt, id }) => {
 		let commitSummary = prompt;
-		const maxLength = 50;
-		if (prompt.length > maxLength) {
-			let cutOff = maxLength - '...'.length;
-			if (prompt.includes("\n")) {
-				cutOff = Math.min(cutOff, prompt.indexOf("\n"));
+		if (placeholder !== undefined) {
+			commitSummary = placeholder;
+		} else {
+			const maxLength = 50;
+			if (prompt.length > maxLength) {
+				let cutOff = maxLength - '...'.length;
+				if (prompt.includes("\n")) {
+					cutOff = Math.min(cutOff, prompt.indexOf("\n"));
+				}
+				commitSummary = prompt.substring(0, cutOff) + '...';
 			}
-			commitSummary = prompt.substring(0, cutOff) + '...';
 		}
 		return { prompt, id, commitSummary };
 	});
@@ -341,14 +436,18 @@ async function collectVersionsInteractively() {
 		alert("Error: The picked prompt element does not match the generated selector.");
 		return;
 	}
-	const allVersions = await collectAllVersions(versionListDivSelector, promptSelector);
-	const versionsWithCommitSummaries = addCommitSummaries(allVersions);
-	const json = JSON.stringify(versionsWithCommitSummaries, null, "\t");
-	console.log(json);
-	const llmPrompt = json.replace(/"commitSummary": "([^"]*)"/g, '"commitSummary": ""') + "\n\n\nAdd short one-line commitSummary fields to these, based on the prompts.";
+	const allVersions = handleContinuePrompts(await collectAllVersions(versionListDivSelector, promptSelector));
+	const versionsWithTruncatedPromptCommitSummaries = addCommitSummaries(allVersions);
+	const versionsWithGenericCommitSummaries = addCommitSummaries(allVersions, "WebSim updates");
+	const versionsWithEmptyCommitSummaries = addCommitSummaries(allVersions, "");
+	const jsonWithTruncatedPromptCommitSummaries = JSON.stringify(versionsWithTruncatedPromptCommitSummaries, null, "\t");
+	const jsonWithGenericCommitSummaries = JSON.stringify(versionsWithGenericCommitSummaries, null, "\t");
+	const llmPrompt = `${JSON.stringify(versionsWithEmptyCommitSummaries, null, "\t")}\n\n\nAdd short one-line commitSummary fields to these, based on the prompts.`;
+	console.log(jsonWithTruncatedPromptCommitSummaries);
 	showOutputDialog([
-		{ outputText: json, noun: "JSON", label: "JSON", default: true },
-		{ outputText: llmPrompt, noun: "LLM prompt", label: "LLM prompt (for automatic commit summaries)" },
+		{ outputText: jsonWithTruncatedPromptCommitSummaries, noun: "JSON", label: "JSON with truncated prompt commit summaries", default: true },
+		{ outputText: jsonWithGenericCommitSummaries, noun: "JSON", label: "JSON with generic commit summaries", default: true },
+		{ outputText: llmPrompt, noun: "LLM prompt", label: "LLM prompt for better automatic commit summaries" },
 	]);
 }
 
@@ -747,7 +846,7 @@ async function downloadVersions(versions, outputDirectory, outputFileName) {
 		console.log(`Added version ${v} to git staging area`);
 		const commitMessage = `${commitSummary || `Version ${v}`}
 
-Websim version link: https://websim.ai/c/${id}
+WebSim version link: https://websim.ai/c/${id}
 
 Automatically downloaded from ${dlUrl}
 via dl-websim-versions.js
