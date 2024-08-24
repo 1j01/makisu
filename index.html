@@ -105,15 +105,15 @@
   <input type="checkbox" id="debug-toggle">
   <label for="debug-toggle">Debug Visualization</label>
   <br>
-  <label for="constraint-threshold">Constraint Break Distance:</label>
-  <input type="number" id="constraint-threshold" value="0.5" min="0" step="0.1">
+  <label for="constraint-threshold">Constraint Break Threshold:</label>
+  <input type="number" id="constraint-threshold" value="1" min="0" step="0.1">
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script type="module">
+  import * as THREE from 'https://cdn.skypack.dev/three@0.132.2';
+  import { OrbitControls } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/controls/OrbitControls.js';
+  import * as CANNON from 'https://cdn.skypack.dev/cannon-es';
 
-<script>
   let scene, camera, renderer, world, controls, raycaster, mouse;
   let timeStep = 1 / 60;
   let sushiIngredients = [];
@@ -131,7 +131,7 @@
   let debugVisualizationEnabled = false;
   let groundPlane;
   let dragStartOffsets = [];
-  let constraintBreakDistance = 0.5;
+  let constraintBreakThreshold = 1;
 
   const RICE_SELECTION_RADIUS = 0.2;
   const RICE_DELETION_RADIUS = 0.3;
@@ -152,7 +152,7 @@
     camera.position.set(0, 5, 10);
     camera.lookAt(0, 0, 0);
 
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
 
@@ -216,7 +216,7 @@
     });
 
     document.getElementById('constraint-threshold').addEventListener('input', (e) => {
-      constraintBreakDistance = parseFloat(e.target.value);
+      constraintBreakThreshold = parseFloat(e.target.value);
     });
 
     renderer.domElement.addEventListener('pointerdown', onPointerDown);
@@ -386,7 +386,7 @@
   function deleteObjects(objectsToDelete) {
     objectsToDelete.forEach(ingredient => {
       scene.remove(ingredient.mesh);
-      world.remove(ingredient.body);
+      world.removeBody(ingredient.body);
       updateIngredientCounter(ingredient.type, -1);
     });
     sushiIngredients = sushiIngredients.filter(ingredient => !objectsToDelete.includes(ingredient));
@@ -599,8 +599,7 @@
       // Check and break constraints if necessary
       if (ingredient.stuckObjects) {
         for (let [otherIngredient, constraint] of ingredient.stuckObjects.entries()) {
-          const distance = ingredient.body.position.distanceTo(otherIngredient.body.position);
-          if (distance > constraintBreakDistance) {
+          if (constraint.equations[0].multiplier > constraintBreakThreshold) {
             world.removeConstraint(constraint);
             ingredient.stuckObjects.delete(otherIngredient);
           }
