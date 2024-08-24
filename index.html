@@ -97,6 +97,7 @@
   let selectedObject = null;
   let isDragging = false;
   let dragPlane;
+  let debugMesh;
 
   function init() {
     scene = new THREE.Scene();
@@ -130,14 +131,22 @@
     groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
     world.addBody(groundBody);
 
-    const groundGeometry = new THREE.PlaneGeometry(10, 10);
-    const groundMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc });
+    const groundSize = 1000;
+    const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize);
+    const groundMaterial = new THREE.MeshStandardMaterial({ color: 0xd2b48c }); // Tan color for wood-like appearance
     const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
     groundMesh.rotation.x = -Math.PI / 2;
     groundMesh.name = 'ground';
     scene.add(groundMesh);
 
     dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
+    // Debug visualization
+    const debugGeometry = new THREE.SphereGeometry(0.05, 32, 32);
+    const debugMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    debugMesh = new THREE.Mesh(debugGeometry, debugMaterial);
+    debugMesh.visible = false;
+    scene.add(debugMesh);
 
     document.getElementById('add-rice').addEventListener('click', addRiceBatch);
     document.getElementById('add-nori').addEventListener('click', addNori);
@@ -200,6 +209,9 @@
     } else if (mode === 'interact-move' || mode === 'interact-delete') {
       controls.mouseButtons.LEFT = null;
     }
+
+    // Show/hide debug visualization
+    debugMesh.visible = (mode === 'interact-move' || mode === 'interact-delete');
   }
 
   function onMouseDown(event) {
@@ -244,11 +256,11 @@
   }
 
   function onMouseMove(event) {
-    if (isDragging && selectedObject) {
-      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-      raycaster.setFromCamera(mouse, camera);
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
 
+    if (isDragging && selectedObject) {
       const intersects = raycaster.intersectObjects([selectedObject]);
       if (intersects.length > 0) {
         const intersection = new THREE.Vector3();
@@ -260,6 +272,14 @@
           sushiIngredients[index].body.velocity.set(0, 0, 0);
           sushiIngredients[index].body.angularVelocity.set(0, 0, 0);
         }
+      }
+    }
+
+    // Update debug visualization
+    if (debugMesh.visible) {
+      const intersects = raycaster.intersectObjects(scene.children);
+      if (intersects.length > 0) {
+        debugMesh.position.copy(intersects[0].point);
       }
     }
   }
