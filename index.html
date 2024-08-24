@@ -1,180 +1,180 @@
-<html><head><base href="https://sushimulator.com/">
+<html><head><base href="https://3dsushimulator.com/">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sushi Simulator: Sticky Rice Physics</title>
+<title>3D Sushi Simulator</title>
 <style>
   body {
     margin: 0;
     padding: 0;
-    font-family: Arial, sans-serif;
-    background-color: #f0f0f0;
     overflow: hidden;
+    font-family: Arial, sans-serif;
   }
-  #sushi-container {
-    width: 100vw;
-    height: 100vh;
-    position: relative;
-  }
-  .rice-particle {
+  #scene-container {
     position: absolute;
-    width: 5px;
-    height: 5px;
-    background-color: #fff;
-    border-radius: 50%;
-    box-shadow: 0 0 2px rgba(0,0,0,0.3);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
   }
-  .nori-sheet {
-    position: absolute;
-    width: 200px;
-    height: 180px;
-    background-color: #2c2c2c;
-    border-radius: 5px;
-    transform-origin: center;
-    cursor: move;
-  }
-  #controls {
+  #ui-container {
     position: absolute;
     top: 10px;
     left: 10px;
-    background-color: rgba(255,255,255,0.8);
+    background-color: rgba(255, 255, 255, 0.8);
     padding: 10px;
     border-radius: 5px;
+  }
+  button {
+    margin: 5px;
+    padding: 5px 10px;
+    font-size: 14px;
+    cursor: pointer;
   }
 </style>
 </head>
 <body>
-<div id="sushi-container"></div>
-<div id="controls">
+<div id="scene-container"></div>
+<div id="ui-container">
   <button id="add-rice">Add Rice</button>
-  <button id="add-nori">Add Nori Sheet</button>
+  <button id="add-nori">Add Nori</button>
+  <button id="add-fish">Add Fish</button>
+  <button id="roll-sushi">Roll Sushi</button>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.18.0/matter.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
 <script>
-  // Initialize Matter.js
-  const Engine = Matter.Engine,
-        Render = Matter.Render,
-        World = Matter.World,
-        Bodies = Matter.Bodies,
-        Mouse = Matter.Mouse,
-        MouseConstraint = Matter.MouseConstraint;
+  let scene, camera, renderer, world, timeStep = 1 / 60;
+  let sushiIngredients = [];
 
-  const engine = Engine.create();
-  const world = engine.world;
+  function init() {
+    // Three.js setup
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById('scene-container').appendChild(renderer.domElement);
 
-  const render = Render.create({
-    element: document.getElementById('sushi-container'),
-    engine: engine,
-    options: {
-      width: window.innerWidth,
-      height: window.innerHeight,
-      wireframes: false,
-      background: 'transparent'
-    }
-  });
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(10, 20, 10);
+    scene.add(directionalLight);
 
-  // Create walls
-  const wallOptions = { 
-    isStatic: true, 
-    render: { visible: false }
-  };
-  World.add(world, [
-    Bodies.rectangle(window.innerWidth / 2, -10, window.innerWidth, 20, wallOptions),
-    Bodies.rectangle(-10, window.innerHeight / 2, 20, window.innerHeight, wallOptions),
-    Bodies.rectangle(window.innerWidth / 2, window.innerHeight + 10, window.innerWidth, 20, wallOptions),
-    Bodies.rectangle(window.innerWidth + 10, window.innerHeight / 2, 20, window.innerHeight, wallOptions)
-  ]);
+    // Camera position
+    camera.position.set(0, 5, 10);
+    camera.lookAt(0, 0, 0);
 
-  // Add mouse control
-  const mouse = Mouse.create(render.canvas);
-  const mouseConstraint = MouseConstraint.create(engine, {
-    mouse: mouse,
-    constraint: {
-      stiffness: 0.2,
-      render: { visible: false }
-    }
-  });
-  World.add(world, mouseConstraint);
+    // Orbit controls
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
 
-  // Rice particle creation function
-  function createRiceParticle(x, y) {
-    const rice = Bodies.circle(x, y, 2.5, {
-      restitution: 0.3,
-      friction: 0.1,
-      density: 0.1,
-      render: {
-        fillStyle: '#fff',
-        strokeStyle: '#ccc',
-        lineWidth: 1
-      }
-    });
-    World.add(world, rice);
+    // Cannon.js world setup
+    world = new CANNON.World();
+    world.gravity.set(0, -9.82, 0);
 
-    const riceElement = document.createElement('div');
-    riceElement.className = 'rice-particle';
-    document.getElementById('sushi-container').appendChild(riceElement);
+    // Create a ground plane
+    const groundShape = new CANNON.Plane();
+    const groundBody = new CANNON.Body({ mass: 0 });
+    groundBody.addShape(groundShape);
+    groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+    world.addBody(groundBody);
 
-    return { body: rice, element: riceElement };
+    const groundGeometry = new THREE.PlaneGeometry(10, 10);
+    const groundMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc });
+    const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
+    groundMesh.rotation.x = -Math.PI / 2;
+    scene.add(groundMesh);
+
+    // Event listeners
+    document.getElementById('add-rice').addEventListener('click', addRice);
+    document.getElementById('add-nori').addEventListener('click', addNori);
+    document.getElementById('add-fish').addEventListener('click', addFish);
+    document.getElementById('roll-sushi').addEventListener('click', rollSushi);
+
+    animate();
   }
 
-  // Nori sheet creation function
-  function createNoriSheet(x, y) {
-    const nori = Bodies.rectangle(x, y, 200, 180, {
-      chamfer: { radius: 5 },
-      render: {
-        fillStyle: '#2c2c2c'
-      }
+  function addRice() {
+    const riceGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+    const riceMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    const riceMesh = new THREE.Mesh(riceGeometry, riceMaterial);
+
+    const riceShape = new CANNON.Sphere(0.1);
+    const riceBody = new CANNON.Body({
+      mass: 0.1,
+      shape: riceShape,
+      position: new CANNON.Vec3(Math.random() * 2 - 1, 5, Math.random() * 2 - 1)
     });
-    World.add(world, nori);
 
-    const noriElement = document.createElement('div');
-    noriElement.className = 'nori-sheet';
-    document.getElementById('sushi-container').appendChild(noriElement);
-
-    return { body: nori, element: noriElement };
+    scene.add(riceMesh);
+    world.addBody(riceBody);
+    sushiIngredients.push({ mesh: riceMesh, body: riceBody, type: 'rice' });
   }
 
-  // Update visual elements
-  const riceParticles = [];
-  const noriSheets = [];
+  function addNori() {
+    const noriGeometry = new THREE.BoxGeometry(1, 0.01, 1);
+    const noriMaterial = new THREE.MeshStandardMaterial({ color: 0x1a4c1a });
+    const noriMesh = new THREE.Mesh(noriGeometry, noriMaterial);
 
-  function updateVisuals() {
-    riceParticles.forEach(rice => {
-      rice.element.style.transform = `translate(${rice.body.position.x - 2.5}px, ${rice.body.position.y - 2.5}px)`;
+    const noriShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.005, 0.5));
+    const noriBody = new CANNON.Body({
+      mass: 0.2,
+      shape: noriShape,
+      position: new CANNON.Vec3(Math.random() * 2 - 1, 5, Math.random() * 2 - 1)
     });
 
-    noriSheets.forEach(nori => {
-      nori.element.style.transform = `translate(${nori.body.position.x - 100}px, ${nori.body.position.y - 90}px) rotate(${nori.body.angle}rad)`;
-    });
-
-    requestAnimationFrame(updateVisuals);
+    scene.add(noriMesh);
+    world.addBody(noriBody);
+    sushiIngredients.push({ mesh: noriMesh, body: noriBody, type: 'nori' });
   }
 
-  // Event listeners for buttons
-  document.getElementById('add-rice').addEventListener('click', () => {
-    for (let i = 0; i < 50; i++) {
-      const x = Math.random() * window.innerWidth;
-      const y = Math.random() * 100;
-      riceParticles.push(createRiceParticle(x, y));
-    }
-  });
+  function addFish() {
+    const fishGeometry = new THREE.BoxGeometry(0.4, 0.1, 0.2);
+    const fishMaterial = new THREE.MeshStandardMaterial({ color: 0xfa8072 });
+    const fishMesh = new THREE.Mesh(fishGeometry, fishMaterial);
 
-  document.getElementById('add-nori').addEventListener('click', () => {
-    const x = Math.random() * (window.innerWidth - 200) + 100;
-    const y = Math.random() * (window.innerHeight - 180) + 90;
-    noriSheets.push(createNoriSheet(x, y));
-  });
+    const fishShape = new CANNON.Box(new CANNON.Vec3(0.2, 0.05, 0.1));
+    const fishBody = new CANNON.Body({
+      mass: 0.3,
+      shape: fishShape,
+      position: new CANNON.Vec3(Math.random() * 2 - 1, 5, Math.random() * 2 - 1)
+    });
 
-  // Run the engine and start the visual updates
-  Engine.run(engine);
-  Render.run(render);
-  updateVisuals();
+    scene.add(fishMesh);
+    world.addBody(fishBody);
+    sushiIngredients.push({ mesh: fishMesh, body: fishBody, type: 'fish' });
+  }
 
-  // Resize handling
+  function rollSushi() {
+    const rollingForce = new CANNON.Vec3(5, 0, 0);
+    sushiIngredients.forEach(ingredient => {
+      ingredient.body.applyLocalForce(rollingForce, new CANNON.Vec3(0, 0, 0));
+    });
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    world.step(timeStep);
+
+    sushiIngredients.forEach(ingredient => {
+      ingredient.mesh.position.copy(ingredient.body.position);
+      ingredient.mesh.quaternion.copy(ingredient.body.quaternion);
+    });
+
+    renderer.render(scene, camera);
+  }
+
   window.addEventListener('resize', () => {
-    render.canvas.width = window.innerWidth;
-    render.canvas.height = window.innerHeight;
-    Matter.Render.setPixelRatio(render, window.devicePixelRatio);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
   });
+
+  init();
 </script>
 </body></html>
