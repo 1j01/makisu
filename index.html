@@ -1,7 +1,7 @@
 <html><head><base href="https://3dsushimulator.com/">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Sushi Simulator - Flexible Seaweed</title>
+<title>3D Sushi Simulator - Interactive Toolbar</title>
 <style>
   body {
     margin: 0;
@@ -24,17 +24,45 @@
     padding: 10px;
     border-radius: 5px;
   }
+  #toolbar {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 10px;
+    border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
   button {
     margin: 5px;
     padding: 5px 10px;
     font-size: 14px;
     cursor: pointer;
   }
+  .toolbar-button {
+    background-color: transparent;
+    border: none;
+    color: white;
+    font-size: 24px;
+    margin: 0 10px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+  }
+  .toolbar-button:hover {
+    color: #ffd700;
+  }
+  .toolbar-button.active {
+    color: #ffd700;
+  }
   #rice-counter, #nori-counter {
     margin-top: 10px;
     font-weight: bold;
   }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
 <div id="scene-container"></div>
@@ -46,18 +74,28 @@
   <div id="rice-counter">Rice grains: 0</div>
   <div id="nori-counter">Nori sheets: 0</div>
 </div>
+<div id="toolbar">
+  <button id="camera-rotate" class="toolbar-button active" title="Rotate Camera"><i class="fas fa-sync-alt"></i></button>
+  <button id="camera-pan" class="toolbar-button" title="Pan Camera"><i class="fas fa-arrows-alt"></i></button>
+  <button id="camera-zoom" class="toolbar-button" title="Zoom Camera"><i class="fas fa-search"></i></button>
+  <button id="interact-move" class="toolbar-button" title="Move Ingredients"><i class="fas fa-hand-paper"></i></button>
+  <button id="interact-delete" class="toolbar-button" title="Delete Ingredients"><i class="fas fa-trash-alt"></i></button>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
 <script>
-  let scene, camera, renderer, world, timeStep = 1 / 60;
+  let scene, camera, renderer, world, controls, raycaster, mouse;
+  let timeStep = 1 / 60;
   let sushiIngredients = [];
   let riceCount = 0;
   let noriCount = 0;
   const MAX_RICE = 100;
   const MAX_NORI = 5;
+  let currentMode = 'camera-rotate';
+  let selectedObject = null;
 
   function init() {
     // Three.js setup
@@ -79,9 +117,13 @@
     camera.lookAt(0, 0, 0);
 
     // Orbit controls
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
+
+    // Raycaster for object interaction
+    raycaster = new THREE.Raycaster();
+    mouse = new THREE.Vector2();
 
     // Cannon.js world setup
     world = new CANNON.World();
@@ -106,7 +148,102 @@
     document.getElementById('add-fish').addEventListener('click', addFish);
     document.getElementById('roll-sushi').addEventListener('click', rollSushi);
 
+    // Toolbar event listeners
+    document.querySelectorAll('.toolbar-button').forEach(button => {
+      button.addEventListener('click', (e) => {
+        setMode(e.currentTarget.id);
+      });
+    });
+
+    renderer.domElement.addEventListener('mousedown', onMouseDown);
+    renderer.domElement.addEventListener('mousemove', onMouseMove);
+    renderer.domElement.addEventListener('mouseup', onMouseUp);
+
     animate();
+  }
+
+  function setMode(mode) {
+    currentMode = mode;
+    document.querySelectorAll('.toolbar-button').forEach(button => {
+      button.classList.remove('active');
+    });
+    document.getElementById(mode).classList.add('active');
+
+    switch (mode) {
+      case 'camera-rotate':
+        controls.enableRotate = true;
+        controls.enablePan = false;
+        controls.enableZoom = false;
+        break;
+      case 'camera-pan':
+        controls.enableRotate = false;
+        controls.enablePan = true;
+        controls.enableZoom = false;
+        break;
+      case 'camera-zoom':
+        controls.enableRotate = false;
+        controls.enablePan = false;
+        controls.enableZoom = true;
+        break;
+      case 'interact-move':
+      case 'interact-delete':
+        controls.enableRotate = false;
+        controls.enablePan = false;
+        controls.enableZoom = false;
+        break;
+    }
+  }
+
+  function onMouseDown(event) {
+    event.preventDefault();
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+
+    const intersects = raycaster.intersectObjects(scene.children);
+
+    if (intersects.length > 0) {
+      if (currentMode === 'interact-move') {
+        selectedObject = intersects[0].object;
+      } else if (currentMode === 'interact-delete') {
+        const deletedObject = intersects[0].object;
+        const index = sushiIngredients.findIndex(item => item.mesh === deletedObject);
+        if (index !== -1) {
+          scene.remove(deletedObject);
+          world.remove(sushiIngredients[index].body);
+          sushiIngredients.splice(index, 1);
+          if (deletedObject.userData.type === 'rice') {
+            riceCount--;
+            updateRiceCounter();
+          } else if (deletedObject.userData.type === 'nori') {
+            noriCount--;
+            updateNoriCounter();
+          }
+        }
+      }
+    }
+  }
+
+  function onMouseMove(event) {
+    if (currentMode === 'interact-move' && selectedObject) {
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+
+      const intersects = raycaster.intersectObject(scene.getObjectByName('ground'));
+      if (intersects.length > 0) {
+        const point = intersects[0].point;
+        selectedObject.position.set(point.x, point.y + 0.5, point.z);
+        const index = sushiIngredients.findIndex(item => item.mesh === selectedObject);
+        if (index !== -1) {
+          sushiIngredients[index].body.position.copy(selectedObject.position);
+        }
+      }
+    }
+  }
+
+  function onMouseUp() {
+    selectedObject = null;
   }
 
   function addRice() {
@@ -115,6 +252,7 @@
     const riceGeometry = new THREE.SphereGeometry(0.05, 8, 8);
     const riceMaterial = new THREE.MeshStandardMaterial({ color: 0xfffaf0 });
     const riceMesh = new THREE.Mesh(riceGeometry, riceMaterial);
+    riceMesh.userData.type = 'rice';
 
     const riceShape = new CANNON.Sphere(0.05);
     const riceBody = new CANNON.Body({
@@ -158,6 +296,7 @@
       const segmentGeometry = new THREE.BoxGeometry(segmentWidth, noriHeight, noriDepth);
       const noriMaterial = new THREE.MeshStandardMaterial({ color: 0x1a4c1a });
       const noriMesh = new THREE.Mesh(segmentGeometry, noriMaterial);
+      noriMesh.userData.type = 'nori';
 
       const noriShape = new CANNON.Box(new CANNON.Vec3(segmentWidth / 2, noriHeight / 2, noriDepth / 2));
       const noriBody = new CANNON.Body({
@@ -199,6 +338,7 @@
     const fishGeometry = new THREE.BoxGeometry(0.4, 0.1, 0.2);
     const fishMaterial = new THREE.MeshStandardMaterial({ color: 0xfa8072 });
     const fishMesh = new THREE.Mesh(fishGeometry, fishMaterial);
+    fishMesh.userData.type = 'fish';
 
     const fishShape = new CANNON.Box(new CANNON.Vec3(0.2, 0.05, 0.1));
     const fishBody = new CANNON.Body({
@@ -228,6 +368,7 @@
       ingredient.mesh.quaternion.copy(ingredient.body.quaternion);
     });
 
+    controls.update();
     renderer.render(scene, camera);
   }
 
