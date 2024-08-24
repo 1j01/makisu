@@ -1,7 +1,7 @@
 <html><head><base href="https://3dsushimulator.com/">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Sushi Simulator - Advanced Interactions</title>
+<title>3D Sushi Simulator - Enhanced Interactions</title>
 <style>
   body {
     margin: 0;
@@ -67,6 +67,12 @@
   #debug-panel label {
     margin-left: 5px;
   }
+  .toolbar-divider {
+    width: 1px;
+    height: 24px;
+    background-color: white;
+    margin: 0 10px;
+  }
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -85,10 +91,11 @@
   </div>
 </div>
 <div id="toolbar" class="ui-panel">
-  <button id="interact-move" class="button toolbar-button active" title="Move Ingredients"><i class="fas fa-hand-paper"></i></button>
   <button id="camera-rotate" class="button toolbar-button" title="Rotate Camera"><i class="fas fa-sync-alt"></i></button>
   <button id="camera-pan" class="button toolbar-button" title="Pan Camera"><i class="fas fa-arrows-alt"></i></button>
   <button id="camera-zoom" class="button toolbar-button" title="Zoom Camera"><i class="fas fa-search"></i></button>
+  <div class="toolbar-divider"></div>
+  <button id="interact-move" class="button toolbar-button active" title="Move Ingredients"><i class="fas fa-hand-paper"></i></button>
   <button id="interact-delete" class="button toolbar-button" title="Delete Ingredients"><i class="fas fa-trash-alt"></i></button>
 </div>
 <div id="debug-panel" class="ui-panel">
@@ -116,6 +123,7 @@
   let debugMesh;
   let highlightedObject = null;
   let debugVisualizationEnabled = false;
+  let groundPlane;
 
   function init() {
     scene = new THREE.Scene();
@@ -156,6 +164,8 @@
     groundMesh.rotation.x = -Math.PI / 2;
     groundMesh.name = 'ground';
     scene.add(groundMesh);
+
+    groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
     dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
@@ -210,23 +220,7 @@
     });
     document.getElementById(mode).classList.add('active');
 
-    switch (mode) {
-      case 'camera-rotate':
-        renderer.domElement.style.cursor = 'default';
-        break;
-      case 'camera-pan':
-        renderer.domElement.style.cursor = 'move';
-        break;
-      case 'camera-zoom':
-        renderer.domElement.style.cursor = 'zoom-in';
-        break;
-      case 'interact-move':
-        renderer.domElement.style.cursor = 'grab';
-        break;
-      case 'interact-delete':
-        renderer.domElement.style.cursor = 'crosshair';
-        break;
-    }
+    updateCursor();
 
     controls.enableRotate = true;
     controls.enablePan = true;
@@ -247,6 +241,26 @@
     }
 
     updateDebugVisualization();
+  }
+
+  function updateCursor() {
+    switch (currentMode) {
+      case 'camera-rotate':
+        renderer.domElement.style.cursor = 'default';
+        break;
+      case 'camera-pan':
+        renderer.domElement.style.cursor = 'move';
+        break;
+      case 'camera-zoom':
+        renderer.domElement.style.cursor = 'zoom-in';
+        break;
+      case 'interact-move':
+        renderer.domElement.style.cursor = isDragging ? 'grabbing' : (highlightedObject ? 'grab' : 'default');
+        break;
+      case 'interact-delete':
+        renderer.domElement.style.cursor = 'crosshair';
+        break;
+    }
   }
 
   function updateDebugVisualization() {
@@ -271,7 +285,6 @@
         selectedObject = intersects[0].object;
         isDragging = true;
         controls.enabled = false;
-        renderer.domElement.style.cursor = 'grabbing';
 
         dragPlane.setFromNormalAndCoplanarPoint(
           camera.getWorldDirection(dragPlane.normal).negate(),
@@ -292,6 +305,7 @@
         }
       }
     }
+    updateCursor();
   }
 
   function onPointerMove(event) {
@@ -315,6 +329,7 @@
       highlightedObject.material.emissive.setHex(0x000000);
       highlightedObject = null;
     }
+    updateCursor();
   }
 
   function onPointerUp(event) {
@@ -322,9 +337,7 @@
     selectedObject = null;
     controls.enabled = true;
     dragPlaneMesh.visible = false;
-    if (currentMode === 'interact-move') {
-      renderer.domElement.style.cursor = 'grab';
-    }
+    updateCursor();
   }
 
   function addRiceBatch() {
@@ -430,20 +443,20 @@
 
   function addBambooMat() {
     const matWidth = 1.5;
-    const matHeight = 0.02;
+    const matHeight = 0.01;
     const matDepth = 1;
     const segments = 15;
 
     for (let i = 0; i < segments; i++) {
       const segmentWidth = matWidth / segments;
       const segmentGeometry = new THREE.BoxGeometry(segmentWidth, matHeight, matDepth);
-      const bambooMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+      const bambooMaterial = new THREE.MeshStandardMaterial({ color: 0x90EE90 }); // Light green color
       const bambooMesh = new THREE.Mesh(segmentGeometry, bambooMaterial);
       bambooMesh.userData.type = 'bamboo';
 
       const bambooShape = new CANNON.Box(new CANNON.Vec3(segmentWidth / 2, matHeight / 2, matDepth / 2));
       const bambooBody = new CANNON.Body({
-        mass: 0.1,
+        mass: 0.05,
         shape: bambooShape,
         position: new CANNON.Vec3((i - segments / 2) * segmentWidth, 5, Math.random() * 2 - 1)
       });
@@ -455,8 +468,8 @@
           {
             pivotA: new CANNON.Vec3(segmentWidth / 2, 0, 0),
             pivotB: new CANNON.Vec3(-segmentWidth / 2, 0, 0),
-            axisA: new CANNON.Vec3(0, 1, 0),
-            axisB: new CANNON.Vec3(0, 1, 0)
+            axisA: new CANNON.Vec3(0, 0, 1),
+            axisB: new CANNON.Vec3(0, 0, 1)
           }
         );
         world.addConstraint(constraint);
@@ -503,6 +516,13 @@
     if (isDragging && selectedObject) {
       const intersection = new THREE.Vector3();
       raycaster.ray.intersectPlane(dragPlane, intersection);
+      
+      // Check if the intersection point is below the ground
+      if (intersection.y < 0) {
+        // Project the intersection point onto the ground plane
+        raycaster.ray.intersectPlane(groundPlane, intersection);
+      }
+      
       selectedObject.position.copy(intersection);
       const index = sushiIngredients.findIndex(item => item.mesh === selectedObject);
       if (index !== -1) {
