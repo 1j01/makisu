@@ -154,6 +154,7 @@
     });
     dragPlaneMesh = new THREE.Mesh(dragPlaneGeometry, dragPlaneMaterial);
     dragPlaneMesh.visible = false;
+    dragPlaneMesh.name = 'dragPlane';
     scene.add(dragPlaneMesh);
 
     // Debug visualization
@@ -252,13 +253,13 @@
 
         // Update drag plane
         dragPlane.setFromNormalAndCoplanarPoint(
-          camera.getWorldDirection(dragPlane.normal),
+          camera.getWorldDirection(dragPlane.normal).negate(),
           selectedObject.position
         );
 
         // Update drag plane visualization
         dragPlaneMesh.position.copy(selectedObject.position);
-        dragPlaneMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dragPlane.normal);
+        dragPlaneMesh.lookAt(camera.position);
         dragPlaneMesh.visible = true;
       } else if (currentMode === 'interact-delete') {
         const deletedObject = intersects[0].object;
@@ -286,23 +287,21 @@
     updatePointerAndRaycaster(event);
 
     if (isDragging && selectedObject) {
-      const intersects = raycaster.intersectObjects([selectedObject]);
-      if (intersects.length > 0) {
-        const intersection = new THREE.Vector3();
-        raycaster.ray.intersectPlane(dragPlane, intersection);
-        selectedObject.position.copy(intersection);
-        const index = sushiIngredients.findIndex(item => item.mesh === selectedObject);
-        if (index !== -1) {
-          sushiIngredients[index].body.position.copy(selectedObject.position);
-          sushiIngredients[index].body.velocity.set(0, 0, 0);
-          sushiIngredients[index].body.angularVelocity.set(0, 0, 0);
-        }
+      const intersection = new THREE.Vector3();
+      raycaster.ray.intersectPlane(dragPlane, intersection);
+      selectedObject.position.copy(intersection);
+      const index = sushiIngredients.findIndex(item => item.mesh === selectedObject);
+      if (index !== -1) {
+        sushiIngredients[index].body.position.copy(selectedObject.position);
+        sushiIngredients[index].body.velocity.set(0, 0, 0);
+        sushiIngredients[index].body.angularVelocity.set(0, 0, 0);
       }
+      dragPlaneMesh.position.copy(intersection);
     }
 
     // Update debug visualization
     if (debugMesh.visible) {
-      const intersects = raycaster.intersectObjects(scene.children.filter(obj => obj.name !== 'debugMesh' && obj.name !== 'ground'));
+      const intersects = raycaster.intersectObjects(scene.children.filter(obj => obj.name !== 'debugMesh' && obj.name !== 'ground' && obj.name !== 'dragPlane'));
       if (intersects.length > 0) {
         debugMesh.position.copy(intersects[0].point);
       }
