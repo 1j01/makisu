@@ -209,8 +209,33 @@
     renderer.domElement.addEventListener('pointerup', onPointerUp);
     renderer.domElement.addEventListener('pointercancel', onPointerUp);
 
+    world.addEventListener('collide', handleCollision);
+
     setMode('interact-move');
     animate();
+  }
+
+  function handleCollision(event) {
+    const { bodyA, bodyB } = event;
+    const ingredientA = sushiIngredients.find(ingredient => ingredient.body === bodyA);
+    const ingredientB = sushiIngredients.find(ingredient => ingredient.body === bodyB);
+
+    if (ingredientA && ingredientB) {
+      if (ingredientA.type === 'rice' || ingredientB.type === 'rice') {
+        const riceIngredient = ingredientA.type === 'rice' ? ingredientA : ingredientB;
+        const otherIngredient = riceIngredient === ingredientA ? ingredientB : ingredientA;
+
+        if (!riceIngredient.stuckObjects) {
+          riceIngredient.stuckObjects = new Map();
+        }
+
+        if (!riceIngredient.stuckObjects.has(otherIngredient) && riceIngredient.stuckObjects.size < 8) {
+          const constraint = new CANNON.DistanceConstraint(riceIngredient.body, otherIngredient.body);
+          world.addConstraint(constraint);
+          riceIngredient.stuckObjects.set(otherIngredient, constraint);
+        }
+      }
+    }
   }
 
   function setMode(mode) {
@@ -363,20 +388,9 @@
 
     scene.add(riceMesh);
     world.addBody(riceBody);
-    sushiIngredients.push({ mesh: riceMesh, body: riceBody, type: 'rice' });
+    sushiIngredients.push({ mesh: riceMesh, body: riceBody, type: 'rice', stuckObjects: new Map() });
 
     updateIngredientCounter('rice', 1);
-
-    const maxDistance = 0.12;
-    sushiIngredients.forEach(ingredient => {
-      if (ingredient.type === 'rice' && ingredient.body !== riceBody) {
-        const distance = riceBody.position.distanceTo(ingredient.body.position);
-        if (distance < maxDistance) {
-          const constraint = new CANNON.DistanceConstraint(riceBody, ingredient.body, maxDistance);
-          world.addConstraint(constraint);
-        }
-      }
-    });
   }
 
   function addNori() {
