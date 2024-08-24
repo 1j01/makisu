@@ -96,6 +96,7 @@
   let currentMode = 'camera-rotate';
   let selectedObject = null;
   let isDragging = false;
+  let dragPlane;
 
   function init() {
     scene = new THREE.Scene();
@@ -135,6 +136,8 @@
     groundMesh.rotation.x = -Math.PI / 2;
     groundMesh.name = 'ground';
     scene.add(groundMesh);
+
+    dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
     document.getElementById('add-rice').addEventListener('click', addRiceBatch);
     document.getElementById('add-nori').addEventListener('click', addNori);
@@ -194,6 +197,8 @@
       controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
     } else if (mode === 'camera-zoom') {
       controls.mouseButtons.LEFT = THREE.MOUSE.DOLLY;
+    } else if (mode === 'interact-move' || mode === 'interact-delete') {
+      controls.mouseButtons.LEFT = null;
     }
   }
 
@@ -203,13 +208,19 @@
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(mouse, camera);
 
-    const intersects = raycaster.intersectObjects(scene.children);
+    const intersects = raycaster.intersectObjects(sushiIngredients.map(item => item.mesh));
 
     if (intersects.length > 0) {
       if (currentMode === 'interact-move') {
         selectedObject = intersects[0].object;
         isDragging = true;
         controls.enabled = false;
+
+        // Update drag plane
+        dragPlane.setFromNormalAndCoplanarPoint(
+          camera.getWorldDirection(dragPlane.normal),
+          selectedObject.position
+        );
       } else if (currentMode === 'interact-delete') {
         const deletedObject = intersects[0].object;
         const index = sushiIngredients.findIndex(item => item.mesh === deletedObject);
@@ -238,13 +249,16 @@
       mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
       raycaster.setFromCamera(mouse, camera);
 
-      const intersects = raycaster.intersectObject(scene.getObjectByName('ground'));
+      const intersects = raycaster.intersectObjects([selectedObject]);
       if (intersects.length > 0) {
-        const point = intersects[0].point;
-        selectedObject.position.set(point.x, point.y + 0.5, point.z);
+        const intersection = new THREE.Vector3();
+        raycaster.ray.intersectPlane(dragPlane, intersection);
+        selectedObject.position.copy(intersection);
         const index = sushiIngredients.findIndex(item => item.mesh === selectedObject);
         if (index !== -1) {
           sushiIngredients[index].body.position.copy(selectedObject.position);
+          sushiIngredients[index].body.velocity.set(0, 0, 0);
+          sushiIngredients[index].body.angularVelocity.set(0, 0, 0);
         }
       }
     }
