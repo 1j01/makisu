@@ -73,6 +73,9 @@
     background-color: white;
     margin: 0 10px;
   }
+  #constraint-threshold {
+    width: 50px;
+  }
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -101,6 +104,9 @@
 <div id="debug-panel" class="ui-panel">
   <input type="checkbox" id="debug-toggle">
   <label for="debug-toggle">Debug Visualization</label>
+  <br>
+  <label for="constraint-threshold">Constraint Break Threshold:</label>
+  <input type="number" id="constraint-threshold" value="1" min="0" step="0.1">
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -124,6 +130,8 @@
   let highlightedObject = null;
   let debugVisualizationEnabled = false;
   let groundPlane;
+  let dragStartOffset = new THREE.Vector3();
+  let constraintBreakThreshold = 1;
 
   const RICE_SELECTION_RADIUS = 0.2;
   const RICE_DELETION_RADIUS = 0.3;
@@ -205,6 +213,10 @@
     document.getElementById('debug-toggle').addEventListener('change', (e) => {
       debugVisualizationEnabled = e.target.checked;
       updateDebugVisualization();
+    });
+
+    document.getElementById('constraint-threshold').addEventListener('input', (e) => {
+      constraintBreakThreshold = parseFloat(e.target.value);
     });
 
     renderer.domElement.addEventListener('pointerdown', onPointerDown);
@@ -318,15 +330,15 @@
           // Select all rice grains within the selection radius
           sushiIngredients.forEach(ingredient => {
             if (ingredient.type === 'rice' && ingredient.mesh.position.distanceTo(selectedObject.position) <= RICE_SELECTION_RADIUS) {
-              selectedObjects.push(ingredient.mesh);
+              selectedObjects.push(ingredient);
             }
           });
         } else {
-          // For other ingredients, select all parts of the same object
-          const objectType = selectedIngredient.type;
+          // For other ingredients, select all parts of the specific logical object
+          const objectId = selectedIngredient.objectId;
           sushiIngredients.forEach(ingredient => {
-            if (ingredient.type === objectType) {
-              selectedObjects.push(ingredient.mesh);
+            if (ingredient.objectId === objectId) {
+              selectedObjects.push(ingredient);
             }
           });
         }
@@ -342,6 +354,11 @@
         dragPlaneMesh.position.copy(selectedObject.position);
         dragPlaneMesh.lookAt(camera.position);
         dragPlaneMesh.visible = debugVisualizationEnabled;
+
+        // Store the initial offset
+        const intersection = new THREE.Vector3();
+        raycaster.ray.intersectPlane(dragPlane, intersection);
+        dragStartOffset.subVectors(selectedObject.position, intersection);
       } else if (currentMode === 'interact-delete') {
         const deletedObject = intersects[0].object;
         const deletedIngredient = sushiIngredients.find(item => item.mesh === deletedObject);
@@ -353,8 +370,8 @@
           );
           deleteObjects(objectsToDelete);
         } else {
-          // For other ingredients, delete all parts of the same object
-          const objectsToDelete = sushiIngredients.filter(ingredient => ingredient.type === deletedIngredient.type);
+          // For other ingredients, delete all parts of the specific logical object
+          const objectsToDelete = sushiIngredients.filter(ingredient => ingredient.objectId === deletedIngredient.objectId);
           deleteObjects(objectsToDelete);
         }
       }
@@ -428,7 +445,7 @@
 
     scene.add(riceMesh);
     world.addBody(riceBody);
-    sushiIngredients.push({ mesh: riceMesh, body: riceBody, type: 'rice', stuckObjects: new Map() });
+    sushiIngredients.push({ mesh: riceMesh, body: riceBody, type: 'rice', stuckObjects: new Map(), objectId: Date.now() });
 
     updateIngredientCounter('rice', 1);
   }
@@ -438,6 +455,7 @@
     const noriHeight = 0.01;
     const noriDepth = 1;
     const segments = 10;
+    const objectId = Date.now();
 
     for (let i = 0; i < segments; i++) {
       const segmentWidth = noriWidth / segments;
@@ -471,7 +489,7 @@
 
       scene.add(noriMesh);
       world.addBody(noriBody);
-      sushiIngredients.push({ mesh: noriMesh, body: noriBody, type: 'nori' });
+      sushiIngredients.push({ mesh: noriMesh, body: noriBody, type: 'nori', objectId });
     }
 
     updateIngredientCounter('nori', 1);
@@ -494,7 +512,7 @@
 
     scene.add(fishMesh);
     world.addBody(fishBody);
-    sushiIngredients.push({ mesh: fishMesh, body: fishBody, type: 'fish' });
+    sushiIngredients.push({ mesh: fishMesh, body: fishBody, type: 'fish', objectId: Date.now() });
 
     updateIngredientCounter('fish', 1);
   }
@@ -504,6 +522,7 @@
     const matHeight = 0.01;
     const matDepth = 1;
     const segments = 15;
+    const objectId = Date.now();
 
     for (let i = 0; i < segments; i++) {
       const segmentWidth = matWidth / segments;
@@ -537,7 +556,7 @@
 
       scene.add(bambooMesh);
       world.addBody(bambooBody);
-      sushiIngredients.push({ mesh: bambooMesh, body: bambooBody, type: 'bamboo' });
+      sushiIngredients.push({ mesh: bambooMesh, body: bambooBody, type: 'bamboo', objectId });
     }
 
     updateIngredientCounter('bamboo', 1);
@@ -571,6 +590,16 @@
     sushiIngredients.forEach(ingredient => {
       ingredient.mesh.position.copy(ingredient.body.position);
       ingredient.mesh.quaternion.copy(ingredient.body.quaternion);
+
+      // Check and break constraints if necessary
+      if (ingredient.stuckObjects) {
+        for (let [otherIngredient, constraint] of ingredient.stuckObjects.entries()) {
+          if (constraint.equations[0].multiplier > constraintBreakThreshold) {
+            world.removeConstraint(constraint);
+            ingredient.stuckObjects.delete(otherIngredient);
+          }
+        }
+      }
     });
 
     if (isDragging && selectedObjects.length > 0) {
@@ -583,17 +612,17 @@
         raycaster.ray.intersectPlane(groundPlane, intersection);
       }
       
-      const mainObject = selectedObjects[0];
+      // Apply the initial offset
+      intersection.add(dragStartOffset);
+      
+      const mainObject = selectedObjects[0].mesh;
       const offset = new THREE.Vector3().subVectors(intersection, mainObject.position);
       
       selectedObjects.forEach(object => {
-        object.position.add(offset);
-        const index = sushiIngredients.findIndex(item => item.mesh === object);
-        if (index !== -1) {
-          sushiIngredients[index].body.position.copy(object.position);
-          sushiIngredients[index].body.velocity.set(0, 0, 0);
-          sushiIngredients[index].body.angularVelocity.set(0, 0, 0);
-        }
+        object.mesh.position.add(offset);
+        object.body.position.copy(object.mesh.position);
+        object.body.velocity.set(0, 0, 0);
+        object.body.angularVelocity.set(0, 0, 0);
       });
       
       dragPlaneMesh.position.copy(intersection);
