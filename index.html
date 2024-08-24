@@ -1,0 +1,180 @@
+<html><head><base href="https://sushimulator.com/">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sushi Simulator: Sticky Rice Physics</title>
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    overflow: hidden;
+  }
+  #sushi-container {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+  }
+  .rice-particle {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    background-color: #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 2px rgba(0,0,0,0.3);
+  }
+  .nori-sheet {
+    position: absolute;
+    width: 200px;
+    height: 180px;
+    background-color: #2c2c2c;
+    border-radius: 5px;
+    transform-origin: center;
+    cursor: move;
+  }
+  #controls {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: rgba(255,255,255,0.8);
+    padding: 10px;
+    border-radius: 5px;
+  }
+</style>
+</head>
+<body>
+<div id="sushi-container"></div>
+<div id="controls">
+  <button id="add-rice">Add Rice</button>
+  <button id="add-nori">Add Nori Sheet</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.18.0/matter.min.js"></script>
+<script>
+  // Initialize Matter.js
+  const Engine = Matter.Engine,
+        Render = Matter.Render,
+        World = Matter.World,
+        Bodies = Matter.Bodies,
+        Mouse = Matter.Mouse,
+        MouseConstraint = Matter.MouseConstraint;
+
+  const engine = Engine.create();
+  const world = engine.world;
+
+  const render = Render.create({
+    element: document.getElementById('sushi-container'),
+    engine: engine,
+    options: {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      wireframes: false,
+      background: 'transparent'
+    }
+  });
+
+  // Create walls
+  const wallOptions = { 
+    isStatic: true, 
+    render: { visible: false }
+  };
+  World.add(world, [
+    Bodies.rectangle(window.innerWidth / 2, -10, window.innerWidth, 20, wallOptions),
+    Bodies.rectangle(-10, window.innerHeight / 2, 20, window.innerHeight, wallOptions),
+    Bodies.rectangle(window.innerWidth / 2, window.innerHeight + 10, window.innerWidth, 20, wallOptions),
+    Bodies.rectangle(window.innerWidth + 10, window.innerHeight / 2, 20, window.innerHeight, wallOptions)
+  ]);
+
+  // Add mouse control
+  const mouse = Mouse.create(render.canvas);
+  const mouseConstraint = MouseConstraint.create(engine, {
+    mouse: mouse,
+    constraint: {
+      stiffness: 0.2,
+      render: { visible: false }
+    }
+  });
+  World.add(world, mouseConstraint);
+
+  // Rice particle creation function
+  function createRiceParticle(x, y) {
+    const rice = Bodies.circle(x, y, 2.5, {
+      restitution: 0.3,
+      friction: 0.1,
+      density: 0.1,
+      render: {
+        fillStyle: '#fff',
+        strokeStyle: '#ccc',
+        lineWidth: 1
+      }
+    });
+    World.add(world, rice);
+
+    const riceElement = document.createElement('div');
+    riceElement.className = 'rice-particle';
+    document.getElementById('sushi-container').appendChild(riceElement);
+
+    return { body: rice, element: riceElement };
+  }
+
+  // Nori sheet creation function
+  function createNoriSheet(x, y) {
+    const nori = Bodies.rectangle(x, y, 200, 180, {
+      chamfer: { radius: 5 },
+      render: {
+        fillStyle: '#2c2c2c'
+      }
+    });
+    World.add(world, nori);
+
+    const noriElement = document.createElement('div');
+    noriElement.className = 'nori-sheet';
+    document.getElementById('sushi-container').appendChild(noriElement);
+
+    return { body: nori, element: noriElement };
+  }
+
+  // Update visual elements
+  const riceParticles = [];
+  const noriSheets = [];
+
+  function updateVisuals() {
+    riceParticles.forEach(rice => {
+      rice.element.style.transform = `translate(${rice.body.position.x - 2.5}px, ${rice.body.position.y - 2.5}px)`;
+    });
+
+    noriSheets.forEach(nori => {
+      nori.element.style.transform = `translate(${nori.body.position.x - 100}px, ${nori.body.position.y - 90}px) rotate(${nori.body.angle}rad)`;
+    });
+
+    requestAnimationFrame(updateVisuals);
+  }
+
+  // Event listeners for buttons
+  document.getElementById('add-rice').addEventListener('click', () => {
+    for (let i = 0; i < 50; i++) {
+      const x = Math.random() * window.innerWidth;
+      const y = Math.random() * 100;
+      riceParticles.push(createRiceParticle(x, y));
+    }
+  });
+
+  document.getElementById('add-nori').addEventListener('click', () => {
+    const x = Math.random() * (window.innerWidth - 200) + 100;
+    const y = Math.random() * (window.innerHeight - 180) + 90;
+    noriSheets.push(createNoriSheet(x, y));
+  });
+
+  // Run the engine and start the visual updates
+  Engine.run(engine);
+  Render.run(render);
+  updateVisuals();
+
+  // Resize handling
+  window.addEventListener('resize', () => {
+    render.canvas.width = window.innerWidth;
+    render.canvas.height = window.innerHeight;
+    Matter.Render.setPixelRatio(render, window.devicePixelRatio);
+  });
+</script>
+</body></html>
