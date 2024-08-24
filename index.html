@@ -209,14 +209,14 @@
     renderer.domElement.addEventListener('pointerup', onPointerUp);
     renderer.domElement.addEventListener('pointercancel', onPointerUp);
 
-    world.addEventListener('collide', handleCollision);
-
     setMode('interact-move');
     animate();
   }
 
   function handleCollision(event) {
-    const { bodyA, bodyB } = event;
+    const bodyA = event.body;
+    const bodyB = event.target;
+
     const ingredientA = sushiIngredients.find(ingredient => ingredient.body === bodyA);
     const ingredientB = sushiIngredients.find(ingredient => ingredient.body === bodyB);
 
@@ -386,6 +386,8 @@
 
     riceBody.material = new CANNON.Material({ friction: 0.5, restitution: 0.1 });
 
+    riceBody.addEventListener("collide", handleCollision);
+
     scene.add(riceMesh);
     world.addBody(riceBody);
     sushiIngredients.push({ mesh: riceMesh, body: riceBody, type: 'rice', stuckObjects: new Map() });
@@ -412,6 +414,8 @@
         shape: noriShape,
         position: new CANNON.Vec3((i - segments / 2) * segmentWidth, 5, Math.random() * 2 - 1)
       });
+
+      noriBody.addEventListener("collide", handleCollision);
 
       if (i > 0) {
         const constraint = new CANNON.HingeConstraint(
@@ -448,6 +452,8 @@
       position: new CANNON.Vec3(Math.random() * 2 - 1, 5, Math.random() * 2 - 1)
     });
 
+    fishBody.addEventListener("collide", handleCollision);
+
     scene.add(fishMesh);
     world.addBody(fishBody);
     sushiIngredients.push({ mesh: fishMesh, body: fishBody, type: 'fish' });
@@ -474,6 +480,8 @@
         shape: bambooShape,
         position: new CANNON.Vec3((i - segments / 2) * segmentWidth, 5, Math.random() * 2 - 1)
       });
+
+      bambooBody.addEventListener("collide", handleCollision);
 
       if (i > 0) {
         const constraint = new CANNON.HingeConstraint(
