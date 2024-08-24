@@ -99,6 +99,7 @@
   <button id="camera-zoom" class="button toolbar-button" title="Zoom Camera"><i class="fas fa-search"></i></button>
   <div class="toolbar-divider"></div>
   <button id="interact-move" class="button toolbar-button active" title="Move Ingredients"><i class="fas fa-hand-paper"></i></button>
+  <button id="interact-pinch" class="button toolbar-button" title="Pinch Ingredients"><i class="fas fa-hand-lizard"></i></button>
   <button id="interact-delete" class="button toolbar-button" title="Delete Ingredients"><i class="fas fa-trash-alt"></i></button>
 </div>
 <div id="debug-panel" class="ui-panel">
@@ -112,7 +113,7 @@
 <script type="module">
   import * as THREE from 'https://cdn.skypack.dev/three@0.132.2';
   import { OrbitControls } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/controls/OrbitControls.js';
-  import * as CANNON from 'https://cdn.skypack.dev/cannon-es';
+  import * as CANNON from 'https://cdn.skypack.dev/cannon-es@0.20.0';
 
   let scene, camera, renderer, world, controls, raycaster, mouse;
   let timeStep = 1 / 60;
@@ -229,8 +230,9 @@
   }
 
   function handleCollision(event) {
-    const bodyA = event.body;
-    const bodyB = event.target;
+    const contact = event.contact;
+    const bodyA = contact.bi;
+    const bodyB = contact.bj;
 
     const ingredientA = sushiIngredients.find(ingredient => ingredient.body === bodyA);
     const ingredientB = sushiIngredients.find(ingredient => ingredient.body === bodyB);
@@ -245,7 +247,17 @@
         }
 
         if (!riceIngredient.stuckObjects.has(otherIngredient) && riceIngredient.stuckObjects.size < 8) {
-          const constraint = new CANNON.DistanceConstraint(riceIngredient.body, otherIngredient.body);
+          const worldPivotA = new CANNON.Vec3();
+          const worldPivotB = new CANNON.Vec3();
+          contact.getWorldPivotA(worldPivotA);
+          contact.getWorldPivotB(worldPivotB);
+
+          const constraint = new CANNON.PointToPointConstraint(
+            riceIngredient.body,
+            bodyA.pointToLocalFrame(worldPivotA),
+            otherIngredient.body,
+            bodyB.pointToLocalFrame(worldPivotB)
+          );
           world.addConstraint(constraint);
           riceIngredient.stuckObjects.set(otherIngredient, constraint);
         }
@@ -276,7 +288,7 @@
       controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
     } else if (mode === 'camera-zoom') {
       controls.mouseButtons.LEFT = THREE.MOUSE.DOLLY;
-    } else if (mode === 'interact-move' || mode === 'interact-delete') {
+    } else if (mode === 'interact-move' || mode === 'interact-pinch' || mode === 'interact-delete') {
       controls.mouseButtons.LEFT = null;
     }
 
@@ -297,6 +309,9 @@
       case 'interact-move':
         renderer.domElement.style.cursor = isDragging ? 'grabbing' : (highlightedObject ? 'grab' : 'default');
         break;
+      case 'interact-pinch':
+        renderer.domElement.style.cursor = isDragging ? 'grabbing' : (highlightedObject ? 'grab' : 'default');
+        break;
       case 'interact-delete':
         renderer.domElement.style.cursor = 'crosshair';
         break;
@@ -304,7 +319,7 @@
   }
 
   function updateDebugVisualization() {
-    debugMesh.visible = debugVisualizationEnabled && (currentMode === 'interact-move' || currentMode === 'interact-delete');
+    debugMesh.visible = debugVisualizationEnabled && (currentMode === 'interact-move' || currentMode === 'interact-pinch' || currentMode === 'interact-delete');
   }
 
   function updatePointerAndRaycaster(event) {
@@ -321,27 +336,32 @@
     const intersects = raycaster.intersectObjects(sushiIngredients.map(item => item.mesh));
 
     if (intersects.length > 0) {
-      if (currentMode === 'interact-move') {
+      if (currentMode === 'interact-move' || currentMode === 'interact-pinch') {
         selectedObjects = [];
         dragStartOffsets = [];
         const selectedObject = intersects[0].object;
         const selectedIngredient = sushiIngredients.find(item => item.mesh === selectedObject);
 
-        if (selectedIngredient.type === 'rice') {
-          // Select all rice grains within the selection radius
-          sushiIngredients.forEach(ingredient => {
-            if (ingredient.type === 'rice' && ingredient.mesh.position.distanceTo(selectedObject.position) <= RICE_SELECTION_RADIUS) {
-              selectedObjects.push(ingredient);
-            }
-          });
-        } else {
-          // For other ingredients, select all parts of the specific logical object
-          const objectId = selectedIngredient.objectId;
-          sushiIngredients.forEach(ingredient => {
-            if (ingredient.objectId === objectId) {
-              selectedObjects.push(ingredient);
-            }
-          });
+        if (currentMode === 'interact-move') {
+          if (selectedIngredient.type === 'rice') {
+            // Select all rice grains within the selection radius
+            sushiIngredients.forEach(ingredient => {
+              if (ingredient.type === 'rice' && ingredient.mesh.position.distanceTo(selectedObject.position) <= RICE_SELECTION_RADIUS) {
+                selectedObjects.push(ingredient);
+              }
+            });
+          } else {
+            // For other ingredients, select all parts of the specific logical object
+            const objectId = selectedIngredient.objectId;
+            sushiIngredients.forEach(ingredient => {
+              if (ingredient.objectId === objectId) {
+                selectedObjects.push(ingredient);
+              }
+            });
+          }
+        } else if (currentMode === 'interact-pinch') {
+          // Select only the clicked object
+          selectedObjects.push(selectedIngredient);
         }
 
         isDragging = true;
