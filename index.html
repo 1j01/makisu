@@ -116,7 +116,7 @@
   let fishCount = 0;
   let bambooCount = 0;
   let currentMode = 'interact-move';
-  let selectedObject = null;
+  let selectedObjects = [];
   let isDragging = false;
   let dragPlane;
   let dragPlaneMesh;
@@ -124,6 +124,9 @@
   let highlightedObject = null;
   let debugVisualizationEnabled = false;
   let groundPlane;
+
+  const RICE_SELECTION_RADIUS = 0.2;
+  const RICE_DELETION_RADIUS = 0.3;
 
   function init() {
     scene = new THREE.Scene();
@@ -307,7 +310,27 @@
 
     if (intersects.length > 0) {
       if (currentMode === 'interact-move') {
-        selectedObject = intersects[0].object;
+        selectedObjects = [];
+        const selectedObject = intersects[0].object;
+        const selectedIngredient = sushiIngredients.find(item => item.mesh === selectedObject);
+
+        if (selectedIngredient.type === 'rice') {
+          // Select all rice grains within the selection radius
+          sushiIngredients.forEach(ingredient => {
+            if (ingredient.type === 'rice' && ingredient.mesh.position.distanceTo(selectedObject.position) <= RICE_SELECTION_RADIUS) {
+              selectedObjects.push(ingredient.mesh);
+            }
+          });
+        } else {
+          // For other ingredients, select all parts of the same object
+          const objectType = selectedIngredient.type;
+          sushiIngredients.forEach(ingredient => {
+            if (ingredient.type === objectType) {
+              selectedObjects.push(ingredient.mesh);
+            }
+          });
+        }
+
         isDragging = true;
         controls.enabled = false;
 
@@ -321,16 +344,31 @@
         dragPlaneMesh.visible = debugVisualizationEnabled;
       } else if (currentMode === 'interact-delete') {
         const deletedObject = intersects[0].object;
-        const index = sushiIngredients.findIndex(item => item.mesh === deletedObject);
-        if (index !== -1) {
-          scene.remove(deletedObject);
-          world.remove(sushiIngredients[index].body);
-          sushiIngredients.splice(index, 1);
-          updateIngredientCounter(deletedObject.userData.type, -1);
+        const deletedIngredient = sushiIngredients.find(item => item.mesh === deletedObject);
+
+        if (deletedIngredient.type === 'rice') {
+          // Delete all rice grains within the deletion radius
+          const objectsToDelete = sushiIngredients.filter(ingredient => 
+            ingredient.type === 'rice' && ingredient.mesh.position.distanceTo(deletedObject.position) <= RICE_DELETION_RADIUS
+          );
+          deleteObjects(objectsToDelete);
+        } else {
+          // For other ingredients, delete all parts of the same object
+          const objectsToDelete = sushiIngredients.filter(ingredient => ingredient.type === deletedIngredient.type);
+          deleteObjects(objectsToDelete);
         }
       }
     }
     updateCursor();
+  }
+
+  function deleteObjects(objectsToDelete) {
+    objectsToDelete.forEach(ingredient => {
+      scene.remove(ingredient.mesh);
+      world.remove(ingredient.body);
+      updateIngredientCounter(ingredient.type, -1);
+    });
+    sushiIngredients = sushiIngredients.filter(ingredient => !objectsToDelete.includes(ingredient));
   }
 
   function onPointerMove(event) {
@@ -359,7 +397,7 @@
 
   function onPointerUp(event) {
     isDragging = false;
-    selectedObject = null;
+    selectedObjects = [];
     controls.enabled = true;
     dragPlaneMesh.visible = false;
     updateCursor();
@@ -535,7 +573,7 @@
       ingredient.mesh.quaternion.copy(ingredient.body.quaternion);
     });
 
-    if (isDragging && selectedObject) {
+    if (isDragging && selectedObjects.length > 0) {
       const intersection = new THREE.Vector3();
       raycaster.ray.intersectPlane(dragPlane, intersection);
       
@@ -545,13 +583,19 @@
         raycaster.ray.intersectPlane(groundPlane, intersection);
       }
       
-      selectedObject.position.copy(intersection);
-      const index = sushiIngredients.findIndex(item => item.mesh === selectedObject);
-      if (index !== -1) {
-        sushiIngredients[index].body.position.copy(selectedObject.position);
-        sushiIngredients[index].body.velocity.set(0, 0, 0);
-        sushiIngredients[index].body.angularVelocity.set(0, 0, 0);
-      }
+      const mainObject = selectedObjects[0];
+      const offset = new THREE.Vector3().subVectors(intersection, mainObject.position);
+      
+      selectedObjects.forEach(object => {
+        object.position.add(offset);
+        const index = sushiIngredients.findIndex(item => item.mesh === object);
+        if (index !== -1) {
+          sushiIngredients[index].body.position.copy(object.position);
+          sushiIngredients[index].body.velocity.set(0, 0, 0);
+          sushiIngredients[index].body.angularVelocity.set(0, 0, 0);
+        }
+      });
+      
       dragPlaneMesh.position.copy(intersection);
     }
 
