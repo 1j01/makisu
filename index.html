@@ -247,17 +247,9 @@
         }
 
         if (!riceIngredient.stuckObjects.has(otherIngredient) && riceIngredient.stuckObjects.size < 8) {
-          const worldPivotA = new CANNON.Vec3();
-          const worldPivotB = new CANNON.Vec3();
-          contact.getWorldPivotA(worldPivotA);
-          contact.getWorldPivotB(worldPivotB);
-
-          const constraint = new CANNON.PointToPointConstraint(
-            riceIngredient.body,
-            bodyA.pointToLocalFrame(worldPivotA),
-            otherIngredient.body,
-            bodyB.pointToLocalFrame(worldPivotB)
-          );
+          const constraint = new CANNON.LockConstraint(riceIngredient.body, otherIngredient.body, {
+            maxForce: 1e6
+          });
           world.addConstraint(constraint);
           riceIngredient.stuckObjects.set(otherIngredient, constraint);
         }
