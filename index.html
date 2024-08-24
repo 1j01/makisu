@@ -1,7 +1,7 @@
 <html><head><base href="https://3dsushimulator.com/">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Sushi Simulator - Improved Interactions with Optional Debug</title>
+<title>3D Sushi Simulator - Advanced Interactions</title>
 <style>
   body {
     margin: 0;
@@ -64,6 +64,9 @@
     top: 10px;
     right: 10px;
   }
+  #debug-panel label {
+    margin-left: 5px;
+  }
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -73,22 +76,24 @@
   <button id="add-rice" class="button">Add Rice</button>
   <button id="add-nori" class="button">Add Nori</button>
   <button id="add-fish" class="button">Add Fish</button>
+  <button id="add-bamboo" class="button">Add Bamboo Mat</button>
   <div id="ingredient-counter">
     <div>Rice grains: <span id="rice-count">0</span></div>
     <div>Nori sheets: <span id="nori-count">0</span></div>
     <div>Fish slices: <span id="fish-count">0</span></div>
+    <div>Bamboo mats: <span id="bamboo-count">0</span></div>
   </div>
 </div>
 <div id="toolbar" class="ui-panel">
-  <button id="camera-rotate" class="button toolbar-button active" title="Rotate Camera"><i class="fas fa-sync-alt"></i></button>
+  <button id="interact-move" class="button toolbar-button active" title="Move Ingredients"><i class="fas fa-hand-paper"></i></button>
+  <button id="camera-rotate" class="button toolbar-button" title="Rotate Camera"><i class="fas fa-sync-alt"></i></button>
   <button id="camera-pan" class="button toolbar-button" title="Pan Camera"><i class="fas fa-arrows-alt"></i></button>
   <button id="camera-zoom" class="button toolbar-button" title="Zoom Camera"><i class="fas fa-search"></i></button>
-  <button id="interact-move" class="button toolbar-button" title="Move Ingredients"><i class="fas fa-hand-paper"></i></button>
   <button id="interact-delete" class="button toolbar-button" title="Delete Ingredients"><i class="fas fa-trash-alt"></i></button>
 </div>
 <div id="debug-panel" class="ui-panel">
-  <label for="debug-toggle">Debug Visualization</label>
   <input type="checkbox" id="debug-toggle">
+  <label for="debug-toggle">Debug Visualization</label>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -102,7 +107,8 @@
   let riceCount = 0;
   let noriCount = 0;
   let fishCount = 0;
-  let currentMode = 'camera-rotate';
+  let bambooCount = 0;
+  let currentMode = 'interact-move';
   let selectedObject = null;
   let isDragging = false;
   let dragPlane;
@@ -145,7 +151,7 @@
 
     const groundSize = 1000;
     const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize);
-    const groundMaterial = new THREE.MeshStandardMaterial({ color: 0xd2b48c }); // Tan color for wood-like appearance
+    const groundMaterial = new THREE.MeshStandardMaterial({ color: 0xd2b48c });
     const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
     groundMesh.rotation.x = -Math.PI / 2;
     groundMesh.name = 'ground';
@@ -153,7 +159,6 @@
 
     dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
-    // Create drag plane visualization
     const dragPlaneGeometry = new THREE.PlaneGeometry(10, 10);
     const dragPlaneMaterial = new THREE.MeshBasicMaterial({
       color: 0x00ff00,
@@ -166,7 +171,6 @@
     dragPlaneMesh.name = 'dragPlane';
     scene.add(dragPlaneMesh);
 
-    // Debug visualization
     const debugGeometry = new THREE.SphereGeometry(0.05, 32, 32);
     const debugMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
     debugMesh = new THREE.Mesh(debugGeometry, debugMaterial);
@@ -177,6 +181,7 @@
     document.getElementById('add-rice').addEventListener('click', addRiceBatch);
     document.getElementById('add-nori').addEventListener('click', addNori);
     document.getElementById('add-fish').addEventListener('click', addFish);
+    document.getElementById('add-bamboo').addEventListener('click', addBambooMat);
 
     document.querySelectorAll('.toolbar-button').forEach(button => {
       button.addEventListener('click', (e) => {
@@ -194,6 +199,7 @@
     renderer.domElement.addEventListener('pointerup', onPointerUp);
     renderer.domElement.addEventListener('pointercancel', onPointerUp);
 
+    setMode('interact-move');
     animate();
   }
 
@@ -204,10 +210,9 @@
     });
     document.getElementById(mode).classList.add('active');
 
-    // Update cursor style
     switch (mode) {
       case 'camera-rotate':
-        renderer.domElement.style.cursor = 'grab';
+        renderer.domElement.style.cursor = 'default';
         break;
       case 'camera-pan':
         renderer.domElement.style.cursor = 'move';
@@ -216,14 +221,13 @@
         renderer.domElement.style.cursor = 'zoom-in';
         break;
       case 'interact-move':
-        renderer.domElement.style.cursor = 'pointer';
+        renderer.domElement.style.cursor = 'grab';
         break;
       case 'interact-delete':
         renderer.domElement.style.cursor = 'crosshair';
         break;
     }
 
-    // Reconfigure controls
     controls.enableRotate = true;
     controls.enablePan = true;
     controls.enableZoom = true;
@@ -267,14 +271,13 @@
         selectedObject = intersects[0].object;
         isDragging = true;
         controls.enabled = false;
+        renderer.domElement.style.cursor = 'grabbing';
 
-        // Update drag plane
         dragPlane.setFromNormalAndCoplanarPoint(
           camera.getWorldDirection(dragPlane.normal).negate(),
           selectedObject.position
         );
 
-        // Update drag plane visualization
         dragPlaneMesh.position.copy(selectedObject.position);
         dragPlaneMesh.lookAt(camera.position);
         dragPlaneMesh.visible = debugVisualizationEnabled;
@@ -285,16 +288,7 @@
           scene.remove(deletedObject);
           world.remove(sushiIngredients[index].body);
           sushiIngredients.splice(index, 1);
-          if (deletedObject.userData.type === 'rice') {
-            riceCount--;
-            updateIngredientCounter();
-          } else if (deletedObject.userData.type === 'nori') {
-            noriCount--;
-            updateIngredientCounter();
-          } else if (deletedObject.userData.type === 'fish') {
-            fishCount--;
-            updateIngredientCounter();
-          }
+          updateIngredientCounter(deletedObject.userData.type, -1);
         }
       }
     }
@@ -303,20 +297,6 @@
   function onPointerMove(event) {
     updatePointerAndRaycaster(event);
 
-    if (isDragging && selectedObject) {
-      const intersection = new THREE.Vector3();
-      raycaster.ray.intersectPlane(dragPlane, intersection);
-      selectedObject.position.copy(intersection);
-      const index = sushiIngredients.findIndex(item => item.mesh === selectedObject);
-      if (index !== -1) {
-        sushiIngredients[index].body.position.copy(selectedObject.position);
-        sushiIngredients[index].body.velocity.set(0, 0, 0);
-        sushiIngredients[index].body.angularVelocity.set(0, 0, 0);
-      }
-      dragPlaneMesh.position.copy(intersection);
-    }
-
-    // Update debug visualization
     if (debugMesh.visible) {
       const intersects = raycaster.intersectObjects(scene.children.filter(obj => obj.name !== 'debugMesh' && obj.name !== 'ground' && obj.name !== 'dragPlane'));
       if (intersects.length > 0) {
@@ -324,7 +304,6 @@
       }
     }
 
-    // Highlight object under cursor
     const intersects = raycaster.intersectObjects(sushiIngredients.map(item => item.mesh));
     if (intersects.length > 0) {
       if (highlightedObject && highlightedObject !== intersects[0].object) {
@@ -343,6 +322,9 @@
     selectedObject = null;
     controls.enabled = true;
     dragPlaneMesh.visible = false;
+    if (currentMode === 'interact-move') {
+      renderer.domElement.style.cursor = 'grab';
+    }
   }
 
   function addRiceBatch() {
@@ -370,8 +352,7 @@
     world.addBody(riceBody);
     sushiIngredients.push({ mesh: riceMesh, body: riceBody, type: 'rice' });
 
-    riceCount++;
-    updateIngredientCounter();
+    updateIngredientCounter('rice', 1);
 
     const maxDistance = 0.12;
     sushiIngredients.forEach(ingredient => {
@@ -424,8 +405,7 @@
       sushiIngredients.push({ mesh: noriMesh, body: noriBody, type: 'nori' });
     }
 
-    noriCount++;
-    updateIngredientCounter();
+    updateIngredientCounter('nori', 1);
   }
 
   function addFish() {
@@ -445,14 +425,70 @@
     world.addBody(fishBody);
     sushiIngredients.push({ mesh: fishMesh, body: fishBody, type: 'fish' });
 
-    fishCount++;
-    updateIngredientCounter();
+    updateIngredientCounter('fish', 1);
   }
 
-  function updateIngredientCounter() {
-    document.getElementById('rice-count').textContent = riceCount;
-    document.getElementById('nori-count').textContent = noriCount;
-    document.getElementById('fish-count').textContent = fishCount;
+  function addBambooMat() {
+    const matWidth = 1.5;
+    const matHeight = 0.02;
+    const matDepth = 1;
+    const segments = 15;
+
+    for (let i = 0; i < segments; i++) {
+      const segmentWidth = matWidth / segments;
+      const segmentGeometry = new THREE.BoxGeometry(segmentWidth, matHeight, matDepth);
+      const bambooMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+      const bambooMesh = new THREE.Mesh(segmentGeometry, bambooMaterial);
+      bambooMesh.userData.type = 'bamboo';
+
+      const bambooShape = new CANNON.Box(new CANNON.Vec3(segmentWidth / 2, matHeight / 2, matDepth / 2));
+      const bambooBody = new CANNON.Body({
+        mass: 0.1,
+        shape: bambooShape,
+        position: new CANNON.Vec3((i - segments / 2) * segmentWidth, 5, Math.random() * 2 - 1)
+      });
+
+      if (i > 0) {
+        const constraint = new CANNON.HingeConstraint(
+          sushiIngredients[sushiIngredients.length - 1].body,
+          bambooBody,
+          {
+            pivotA: new CANNON.Vec3(segmentWidth / 2, 0, 0),
+            pivotB: new CANNON.Vec3(-segmentWidth / 2, 0, 0),
+            axisA: new CANNON.Vec3(0, 1, 0),
+            axisB: new CANNON.Vec3(0, 1, 0)
+          }
+        );
+        world.addConstraint(constraint);
+      }
+
+      scene.add(bambooMesh);
+      world.addBody(bambooBody);
+      sushiIngredients.push({ mesh: bambooMesh, body: bambooBody, type: 'bamboo' });
+    }
+
+    updateIngredientCounter('bamboo', 1);
+  }
+
+  function updateIngredientCounter(type, change) {
+    switch (type) {
+      case 'rice':
+        riceCount += change;
+        document.getElementById('rice-count').textContent = riceCount;
+        break;
+      case 'nori':
+        noriCount += change;
+        document.getElementById('nori-count').textContent = noriCount;
+        break;
+      case 'fish':
+        fishCount += change;
+        document.getElementById('fish-count').textContent = fishCount;
+        break;
+      case 'bamboo':
+        bambooCount += change;
+        document.getElementById('bamboo-count').textContent = bambooCount;
+        break;
+    }
   }
 
   function animate() {
@@ -463,6 +499,19 @@
       ingredient.mesh.position.copy(ingredient.body.position);
       ingredient.mesh.quaternion.copy(ingredient.body.quaternion);
     });
+
+    if (isDragging && selectedObject) {
+      const intersection = new THREE.Vector3();
+      raycaster.ray.intersectPlane(dragPlane, intersection);
+      selectedObject.position.copy(intersection);
+      const index = sushiIngredients.findIndex(item => item.mesh === selectedObject);
+      if (index !== -1) {
+        sushiIngredients[index].body.position.copy(selectedObject.position);
+        sushiIngredients[index].body.velocity.set(0, 0, 0);
+        sushiIngredients[index].body.angularVelocity.set(0, 0, 0);
+      }
+      dragPlaneMesh.position.copy(intersection);
+    }
 
     controls.update();
     renderer.render(scene, camera);
