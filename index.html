@@ -1,7 +1,7 @@
 <html><head><base href="https://3dsushimulator.com/">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Sushi Simulator - Improved Interactions</title>
+<title>3D Sushi Simulator - Improved Interactions with Pointer Events</title>
 <style>
   body {
     margin: 0;
@@ -16,6 +16,7 @@
     left: 0;
     width: 100%;
     height: 100%;
+    touch-action: none;
   }
   .ui-panel {
     position: absolute;
@@ -173,9 +174,10 @@
       });
     });
 
-    renderer.domElement.addEventListener('mousedown', onMouseDown);
-    renderer.domElement.addEventListener('mousemove', onMouseMove);
-    renderer.domElement.addEventListener('mouseup', onMouseUp);
+    renderer.domElement.addEventListener('pointerdown', onPointerDown);
+    renderer.domElement.addEventListener('pointermove', onPointerMove);
+    renderer.domElement.addEventListener('pointerup', onPointerUp);
+    renderer.domElement.addEventListener('pointercancel', onPointerUp);
 
     animate();
   }
@@ -229,15 +231,16 @@
     debugMesh.visible = (mode === 'interact-move' || mode === 'interact-delete');
   }
 
-  function updateMouseAndRaycaster(event) {
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  function updatePointerAndRaycaster(event) {
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(mouse, camera);
   }
 
-  function onMouseDown(event) {
+  function onPointerDown(event) {
     event.preventDefault();
-    updateMouseAndRaycaster(event);
+    updatePointerAndRaycaster(event);
 
     const intersects = raycaster.intersectObjects(sushiIngredients.map(item => item.mesh));
 
@@ -279,8 +282,8 @@
     }
   }
 
-  function onMouseMove(event) {
-    updateMouseAndRaycaster(event);
+  function onPointerMove(event) {
+    updatePointerAndRaycaster(event);
 
     if (isDragging && selectedObject) {
       const intersects = raycaster.intersectObjects([selectedObject]);
@@ -319,7 +322,7 @@
     }
   }
 
-  function onMouseUp() {
+  function onPointerUp(event) {
     isDragging = false;
     selectedObject = null;
     controls.enabled = true;
