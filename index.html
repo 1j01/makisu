@@ -1,7 +1,7 @@
 <html><head><base href="https://3dsushimulator.com/">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Sushi Simulator - Adding Rice</title>
+<title>3D Sushi Simulator - Flexible Seaweed</title>
 <style>
   body {
     margin: 0;
@@ -30,7 +30,7 @@
     font-size: 14px;
     cursor: pointer;
   }
-  #rice-counter {
+  #rice-counter, #nori-counter {
     margin-top: 10px;
     font-weight: bold;
   }
@@ -39,11 +39,12 @@
 <body>
 <div id="scene-container"></div>
 <div id="ui-container">
-  <button id="add-rice" disabled>Add Rice</button>
+  <button id="add-rice">Add Rice</button>
   <button id="add-nori">Add Nori</button>
   <button id="add-fish">Add Fish</button>
   <button id="roll-sushi">Roll Sushi</button>
   <div id="rice-counter">Rice grains: 0</div>
+  <div id="nori-counter">Nori sheets: 0</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -54,7 +55,9 @@
   let scene, camera, renderer, world, timeStep = 1 / 60;
   let sushiIngredients = [];
   let riceCount = 0;
+  let noriCount = 0;
   const MAX_RICE = 100;
+  const MAX_NORI = 5;
 
   function init() {
     // Three.js setup
@@ -142,20 +145,54 @@
   }
 
   function addNori() {
-    const noriGeometry = new THREE.BoxGeometry(1, 0.01, 1);
-    const noriMaterial = new THREE.MeshStandardMaterial({ color: 0x1a4c1a });
-    const noriMesh = new THREE.Mesh(noriGeometry, noriMaterial);
+    if (noriCount >= MAX_NORI) return;
 
-    const noriShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.005, 0.5));
-    const noriBody = new CANNON.Body({
-      mass: 0.2,
-      shape: noriShape,
-      position: new CANNON.Vec3(Math.random() * 2 - 1, 5, Math.random() * 2 - 1)
-    });
+    const noriWidth = 1;
+    const noriHeight = 0.01;
+    const noriDepth = 1;
+    const segments = 10;
 
-    scene.add(noriMesh);
-    world.addBody(noriBody);
-    sushiIngredients.push({ mesh: noriMesh, body: noriBody, type: 'nori' });
+    // Create flexible nori sheet using a series of connected boxes
+    for (let i = 0; i < segments; i++) {
+      const segmentWidth = noriWidth / segments;
+      const segmentGeometry = new THREE.BoxGeometry(segmentWidth, noriHeight, noriDepth);
+      const noriMaterial = new THREE.MeshStandardMaterial({ color: 0x1a4c1a });
+      const noriMesh = new THREE.Mesh(segmentGeometry, noriMaterial);
+
+      const noriShape = new CANNON.Box(new CANNON.Vec3(segmentWidth / 2, noriHeight / 2, noriDepth / 2));
+      const noriBody = new CANNON.Body({
+        mass: 0.05,
+        shape: noriShape,
+        position: new CANNON.Vec3((i - segments / 2) * segmentWidth, 5, Math.random() * 2 - 1)
+      });
+
+      if (i > 0) {
+        const constraint = new CANNON.HingeConstraint(
+          sushiIngredients[sushiIngredients.length - 1].body,
+          noriBody,
+          {
+            pivotA: new CANNON.Vec3(segmentWidth / 2, 0, 0),
+            pivotB: new CANNON.Vec3(-segmentWidth / 2, 0, 0),
+            axisA: new CANNON.Vec3(0, 0, 1),
+            axisB: new CANNON.Vec3(0, 0, 1)
+          }
+        );
+        world.addConstraint(constraint);
+      }
+
+      scene.add(noriMesh);
+      world.addBody(noriBody);
+      sushiIngredients.push({ mesh: noriMesh, body: noriBody, type: 'nori' });
+    }
+
+    noriCount++;
+    updateNoriCounter();
+  }
+
+  function updateNoriCounter() {
+    document.getElementById('nori-counter').textContent = `Nori sheets: ${noriCount}`;
+    const addNoriButton = document.getElementById('add-nori');
+    addNoriButton.disabled = noriCount >= MAX_NORI;
   }
 
   function addFish() {
@@ -202,9 +239,13 @@
 
   init();
   
-  // Simulate clicking the "Add Rice" button
-  for (let i = 0; i < 10; i++) {
-    setTimeout(addRice, i * 100);
-  }
+  // Simulate adding some ingredients
+  setTimeout(() => {
+    for (let i = 0; i < 50; i++) {
+      setTimeout(addRice, i * 50);
+    }
+    setTimeout(addNori, 2500);
+    setTimeout(addFish, 3000);
+  }, 1000);
 </script>
 </body></html>
