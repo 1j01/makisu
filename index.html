@@ -1,13 +1,14 @@
 <html><head><base href="https://3dsushimulator.com/">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Sushi Simulator - Interactive Toolbar</title>
+<title>3D Sushi Simulator - Improved UI</title>
 <style>
   body {
     margin: 0;
     padding: 0;
     overflow: hidden;
     font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
   }
   #scene-container {
     position: absolute;
@@ -16,70 +17,69 @@
     width: 100%;
     height: 100%;
   }
-  #ui-container {
+  .ui-panel {
     position: absolute;
-    top: 10px;
-    left: 10px;
-    background-color: rgba(255, 255, 255, 0.8);
-    padding: 10px;
-    border-radius: 5px;
-  }
-  #toolbar {
-    position: absolute;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
     background-color: rgba(0, 0, 0, 0.7);
     padding: 10px;
     border-radius: 5px;
+    color: white;
+  }
+  #ingredient-panel {
+    top: 10px;
+    left: 10px;
+  }
+  #toolbar {
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     justify-content: center;
     align-items: center;
   }
-  button {
-    margin: 5px;
-    padding: 5px 10px;
-    font-size: 14px;
-    cursor: pointer;
-  }
-  .toolbar-button {
+  .button {
     background-color: transparent;
     border: none;
     color: white;
-    font-size: 24px;
+    font-size: 16px;
     margin: 0 10px;
     cursor: pointer;
     transition: color 0.3s ease;
+    padding: 5px 10px;
   }
-  .toolbar-button:hover {
+  .button:hover {
     color: #ffd700;
   }
-  .toolbar-button.active {
+  .button.active {
     color: #ffd700;
   }
-  #rice-counter, #nori-counter {
+  .toolbar-button {
+    font-size: 24px;
+  }
+  #ingredient-counter {
     margin-top: 10px;
-    font-weight: bold;
+    font-size: 14px;
   }
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
 <div id="scene-container"></div>
-<div id="ui-container">
-  <button id="add-rice">Add Rice</button>
-  <button id="add-nori">Add Nori</button>
-  <button id="add-fish">Add Fish</button>
-  <button id="roll-sushi">Roll Sushi</button>
-  <div id="rice-counter">Rice grains: 0</div>
-  <div id="nori-counter">Nori sheets: 0</div>
+<div id="ingredient-panel" class="ui-panel">
+  <button id="add-rice" class="button">Add Rice</button>
+  <button id="add-nori" class="button">Add Nori</button>
+  <button id="add-fish" class="button">Add Fish</button>
+  <div id="ingredient-counter">
+    <div>Rice grains: <span id="rice-count">0</span></div>
+    <div>Nori sheets: <span id="nori-count">0</span></div>
+    <div>Fish slices: <span id="fish-count">0</span></div>
+  </div>
 </div>
-<div id="toolbar">
-  <button id="camera-rotate" class="toolbar-button active" title="Rotate Camera"><i class="fas fa-sync-alt"></i></button>
-  <button id="camera-pan" class="toolbar-button" title="Pan Camera"><i class="fas fa-arrows-alt"></i></button>
-  <button id="camera-zoom" class="toolbar-button" title="Zoom Camera"><i class="fas fa-search"></i></button>
-  <button id="interact-move" class="toolbar-button" title="Move Ingredients"><i class="fas fa-hand-paper"></i></button>
-  <button id="interact-delete" class="toolbar-button" title="Delete Ingredients"><i class="fas fa-trash-alt"></i></button>
+<div id="toolbar" class="ui-panel">
+  <button id="camera-rotate" class="button toolbar-button active" title="Rotate Camera"><i class="fas fa-sync-alt"></i></button>
+  <button id="camera-pan" class="button toolbar-button" title="Pan Camera"><i class="fas fa-arrows-alt"></i></button>
+  <button id="camera-zoom" class="button toolbar-button" title="Zoom Camera"><i class="fas fa-search"></i></button>
+  <button id="interact-move" class="button toolbar-button" title="Move Ingredients"><i class="fas fa-hand-paper"></i></button>
+  <button id="interact-delete" class="button toolbar-button" title="Delete Ingredients"><i class="fas fa-trash-alt"></i></button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -92,8 +92,7 @@
   let sushiIngredients = [];
   let riceCount = 0;
   let noriCount = 0;
-  const MAX_RICE = 100;
-  const MAX_NORI = 5;
+  let fishCount = 0;
   let currentMode = 'camera-rotate';
   let selectedObject = null;
 
@@ -140,13 +139,13 @@
     const groundMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc });
     const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
     groundMesh.rotation.x = -Math.PI / 2;
+    groundMesh.name = 'ground';
     scene.add(groundMesh);
 
     // Event listeners
     document.getElementById('add-rice').addEventListener('click', addRice);
     document.getElementById('add-nori').addEventListener('click', addNori);
     document.getElementById('add-fish').addEventListener('click', addFish);
-    document.getElementById('roll-sushi').addEventListener('click', rollSushi);
 
     // Toolbar event listeners
     document.querySelectorAll('.toolbar-button').forEach(button => {
@@ -214,10 +213,13 @@
           sushiIngredients.splice(index, 1);
           if (deletedObject.userData.type === 'rice') {
             riceCount--;
-            updateRiceCounter();
+            updateIngredientCounter();
           } else if (deletedObject.userData.type === 'nori') {
             noriCount--;
-            updateNoriCounter();
+            updateIngredientCounter();
+          } else if (deletedObject.userData.type === 'fish') {
+            fishCount--;
+            updateIngredientCounter();
           }
         }
       }
@@ -247,8 +249,6 @@
   }
 
   function addRice() {
-    if (riceCount >= MAX_RICE) return;
-
     const riceGeometry = new THREE.SphereGeometry(0.05, 8, 8);
     const riceMaterial = new THREE.MeshStandardMaterial({ color: 0xfffaf0 });
     const riceMesh = new THREE.Mesh(riceGeometry, riceMaterial);
@@ -266,25 +266,15 @@
     sushiIngredients.push({ mesh: riceMesh, body: riceBody, type: 'rice' });
 
     riceCount++;
-    updateRiceCounter();
+    updateIngredientCounter();
 
     // Add multiple rice grains at once
-    if (riceCount % 10 === 0) {
-      for (let i = 0; i < 9; i++) {
-        setTimeout(addRice, i * 50);
-      }
+    for (let i = 0; i < 9; i++) {
+      setTimeout(addRice, i * 50);
     }
   }
 
-  function updateRiceCounter() {
-    document.getElementById('rice-counter').textContent = `Rice grains: ${riceCount}`;
-    const addRiceButton = document.getElementById('add-rice');
-    addRiceButton.disabled = riceCount >= MAX_RICE;
-  }
-
   function addNori() {
-    if (noriCount >= MAX_NORI) return;
-
     const noriWidth = 1;
     const noriHeight = 0.01;
     const noriDepth = 1;
@@ -325,13 +315,7 @@
     }
 
     noriCount++;
-    updateNoriCounter();
-  }
-
-  function updateNoriCounter() {
-    document.getElementById('nori-counter').textContent = `Nori sheets: ${noriCount}`;
-    const addNoriButton = document.getElementById('add-nori');
-    addNoriButton.disabled = noriCount >= MAX_NORI;
+    updateIngredientCounter();
   }
 
   function addFish() {
@@ -350,13 +334,15 @@
     scene.add(fishMesh);
     world.addBody(fishBody);
     sushiIngredients.push({ mesh: fishMesh, body: fishBody, type: 'fish' });
+
+    fishCount++;
+    updateIngredientCounter();
   }
 
-  function rollSushi() {
-    const rollingForce = new CANNON.Vec3(5, 0, 0);
-    sushiIngredients.forEach(ingredient => {
-      ingredient.body.applyLocalForce(rollingForce, new CANNON.Vec3(0, 0, 0));
-    });
+  function updateIngredientCounter() {
+    document.getElementById('rice-count').textContent = riceCount;
+    document.getElementById('nori-count').textContent = noriCount;
+    document.getElementById('fish-count').textContent = fishCount;
   }
 
   function animate() {
@@ -379,14 +365,5 @@
   });
 
   init();
-  
-  // Simulate adding some ingredients
-  setTimeout(() => {
-    for (let i = 0; i < 50; i++) {
-      setTimeout(addRice, i * 50);
-    }
-    setTimeout(addNori, 2500);
-    setTimeout(addFish, 3000);
-  }, 1000);
 </script>
 </body></html>
