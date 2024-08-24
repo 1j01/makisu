@@ -1,7 +1,7 @@
 <html><head><base href="https://3dsushimulator.com/">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Sushi Simulator - Improved UI</title>
+<title>3D Sushi Simulator - Sticky Rice</title>
 <style>
   body {
     margin: 0;
@@ -65,7 +65,7 @@
 <body>
 <div id="scene-container"></div>
 <div id="ingredient-panel" class="ui-panel">
-  <button id="add-rice" class="button">Add Rice</button>
+  <button id="add-rice" class="button">Add Rice (100 grains)</button>
   <button id="add-nori" class="button">Add Nori</button>
   <button id="add-fish" class="button">Add Fish</button>
   <div id="ingredient-counter">
@@ -143,7 +143,7 @@
     scene.add(groundMesh);
 
     // Event listeners
-    document.getElementById('add-rice').addEventListener('click', addRice);
+    document.getElementById('add-rice').addEventListener('click', addRiceBatch);
     document.getElementById('add-nori').addEventListener('click', addNori);
     document.getElementById('add-fish').addEventListener('click', addFish);
 
@@ -248,6 +248,12 @@
     selectedObject = null;
   }
 
+  function addRiceBatch() {
+    for (let i = 0; i < 100; i++) {
+      setTimeout(() => addRice(), i * 10);
+    }
+  }
+
   function addRice() {
     const riceGeometry = new THREE.SphereGeometry(0.05, 8, 8);
     const riceMaterial = new THREE.MeshStandardMaterial({ color: 0xfffaf0 });
@@ -258,8 +264,11 @@
     const riceBody = new CANNON.Body({
       mass: 0.01,
       shape: riceShape,
-      position: new CANNON.Vec3(Math.random() * 2 - 1, 5, Math.random() * 2 - 1)
+      position: new CANNON.Vec3(Math.random() * 2 - 1, 5 + Math.random() * 2, Math.random() * 2 - 1)
     });
+
+    // Add friction and restitution for stickiness
+    riceBody.material = new CANNON.Material({ friction: 0.5, restitution: 0.1 });
 
     scene.add(riceMesh);
     world.addBody(riceBody);
@@ -268,10 +277,17 @@
     riceCount++;
     updateIngredientCounter();
 
-    // Add multiple rice grains at once
-    for (let i = 0; i < 9; i++) {
-      setTimeout(addRice, i * 50);
-    }
+    // Add constraints to nearby rice grains
+    const maxDistance = 0.12; // Maximum distance for rice grains to stick together
+    sushiIngredients.forEach(ingredient => {
+      if (ingredient.type === 'rice' && ingredient.body !== riceBody) {
+        const distance = riceBody.position.distanceTo(ingredient.body.position);
+        if (distance < maxDistance) {
+          const constraint = new CANNON.DistanceConstraint(riceBody, ingredient.body, maxDistance);
+          world.addConstraint(constraint);
+        }
+      }
+    });
   }
 
   function addNori() {
