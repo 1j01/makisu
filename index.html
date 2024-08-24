@@ -98,6 +98,7 @@
   let isDragging = false;
   let dragPlane;
   let debugMesh;
+  let highlightedObject = null;
 
   function init() {
     scene = new THREE.Scene();
@@ -146,6 +147,7 @@
     const debugMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
     debugMesh = new THREE.Mesh(debugGeometry, debugMaterial);
     debugMesh.visible = false;
+    debugMesh.name = 'debugMesh';
     scene.add(debugMesh);
 
     document.getElementById('add-rice').addEventListener('click', addRiceBatch);
@@ -277,10 +279,23 @@
 
     // Update debug visualization
     if (debugMesh.visible) {
-      const intersects = raycaster.intersectObjects(scene.children);
+      const intersects = raycaster.intersectObjects(scene.children.filter(obj => obj.name !== 'debugMesh' && obj.name !== 'ground'));
       if (intersects.length > 0) {
         debugMesh.position.copy(intersects[0].point);
       }
+    }
+
+    // Highlight object under cursor
+    const intersects = raycaster.intersectObjects(sushiIngredients.map(item => item.mesh));
+    if (intersects.length > 0) {
+      if (highlightedObject && highlightedObject !== intersects[0].object) {
+        highlightedObject.material.emissive.setHex(0x000000);
+      }
+      highlightedObject = intersects[0].object;
+      highlightedObject.material.emissive.setHex(0x444444);
+    } else if (highlightedObject) {
+      highlightedObject.material.emissive.setHex(0x000000);
+      highlightedObject = null;
     }
   }
 
