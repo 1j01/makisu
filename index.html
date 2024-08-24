@@ -1,7 +1,7 @@
 <html><head><base href="https://3dsushimulator.com/">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Sushi Simulator - Improved Interactions with Pointer Events</title>
+<title>3D Sushi Simulator - Improved Interactions with Optional Debug</title>
 <style>
   body {
     margin: 0;
@@ -60,6 +60,10 @@
     margin-top: 10px;
     font-size: 14px;
   }
+  #debug-panel {
+    top: 10px;
+    right: 10px;
+  }
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -82,6 +86,10 @@
   <button id="interact-move" class="button toolbar-button" title="Move Ingredients"><i class="fas fa-hand-paper"></i></button>
   <button id="interact-delete" class="button toolbar-button" title="Delete Ingredients"><i class="fas fa-trash-alt"></i></button>
 </div>
+<div id="debug-panel" class="ui-panel">
+  <label for="debug-toggle">Debug Visualization</label>
+  <input type="checkbox" id="debug-toggle">
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
@@ -101,6 +109,7 @@
   let dragPlaneMesh;
   let debugMesh;
   let highlightedObject = null;
+  let debugVisualizationEnabled = false;
 
   function init() {
     scene = new THREE.Scene();
@@ -175,6 +184,11 @@
       });
     });
 
+    document.getElementById('debug-toggle').addEventListener('change', (e) => {
+      debugVisualizationEnabled = e.target.checked;
+      updateDebugVisualization();
+    });
+
     renderer.domElement.addEventListener('pointerdown', onPointerDown);
     renderer.domElement.addEventListener('pointermove', onPointerMove);
     renderer.domElement.addEventListener('pointerup', onPointerUp);
@@ -228,8 +242,11 @@
       controls.mouseButtons.LEFT = null;
     }
 
-    // Show/hide debug visualization
-    debugMesh.visible = (mode === 'interact-move' || mode === 'interact-delete');
+    updateDebugVisualization();
+  }
+
+  function updateDebugVisualization() {
+    debugMesh.visible = debugVisualizationEnabled && (currentMode === 'interact-move' || currentMode === 'interact-delete');
   }
 
   function updatePointerAndRaycaster(event) {
@@ -260,7 +277,7 @@
         // Update drag plane visualization
         dragPlaneMesh.position.copy(selectedObject.position);
         dragPlaneMesh.lookAt(camera.position);
-        dragPlaneMesh.visible = true;
+        dragPlaneMesh.visible = debugVisualizationEnabled;
       } else if (currentMode === 'interact-delete') {
         const deletedObject = intersects[0].object;
         const index = sushiIngredients.findIndex(item => item.mesh === deletedObject);
