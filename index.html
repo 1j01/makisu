@@ -97,6 +97,7 @@
   let selectedObject = null;
   let isDragging = false;
   let dragPlane;
+  let dragPlaneMesh;
   let debugMesh;
   let highlightedObject = null;
 
@@ -141,6 +142,18 @@
     scene.add(groundMesh);
 
     dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
+    // Create drag plane visualization
+    const dragPlaneGeometry = new THREE.PlaneGeometry(10, 10);
+    const dragPlaneMaterial = new THREE.MeshBasicMaterial({
+      color: 0x00ff00,
+      transparent: true,
+      opacity: 0.2,
+      side: THREE.DoubleSide
+    });
+    dragPlaneMesh = new THREE.Mesh(dragPlaneGeometry, dragPlaneMaterial);
+    dragPlaneMesh.visible = false;
+    scene.add(dragPlaneMesh);
 
     // Debug visualization
     const debugGeometry = new THREE.SphereGeometry(0.05, 32, 32);
@@ -216,11 +229,15 @@
     debugMesh.visible = (mode === 'interact-move' || mode === 'interact-delete');
   }
 
-  function onMouseDown(event) {
-    event.preventDefault();
+  function updateMouseAndRaycaster(event) {
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(mouse, camera);
+  }
+
+  function onMouseDown(event) {
+    event.preventDefault();
+    updateMouseAndRaycaster(event);
 
     const intersects = raycaster.intersectObjects(sushiIngredients.map(item => item.mesh));
 
@@ -235,6 +252,11 @@
           camera.getWorldDirection(dragPlane.normal),
           selectedObject.position
         );
+
+        // Update drag plane visualization
+        dragPlaneMesh.position.copy(selectedObject.position);
+        dragPlaneMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dragPlane.normal);
+        dragPlaneMesh.visible = true;
       } else if (currentMode === 'interact-delete') {
         const deletedObject = intersects[0].object;
         const index = sushiIngredients.findIndex(item => item.mesh === deletedObject);
@@ -258,9 +280,7 @@
   }
 
   function onMouseMove(event) {
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    raycaster.setFromCamera(mouse, camera);
+    updateMouseAndRaycaster(event);
 
     if (isDragging && selectedObject) {
       const intersects = raycaster.intersectObjects([selectedObject]);
@@ -303,6 +323,7 @@
     isDragging = false;
     selectedObject = null;
     controls.enabled = true;
+    dragPlaneMesh.visible = false;
   }
 
   function addRiceBatch() {
