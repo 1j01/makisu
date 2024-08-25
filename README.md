@@ -15,7 +15,7 @@ Use the makisu (bamboo mat) to roll and form the sushi.
 Features:
 - Lovely pixel art for lots of sushi ingredients (not all are used in the game)
 - Bowls of ingredients
-- You can adjust the axonometric perspective freely with the arrow keys, including making it 2D if you wish
+- You can adjust the 3D effect (oblique projection) freely with the arrow keys, including making it fully 2D if you wish
 - Physics are kinda janky but you can technically roll sushi if you're careful
 - Secret music (not enabled in the game) imitating Katamari Damacy's theme music
 
