@@ -10,7 +10,7 @@ It uses Verlet integration for point-based physics.
 
 Use the makisu (bamboo mat) to roll and form the sushi.
 
-🕹️ Download the cartridge file [makisu.tic](./makisu.tic) and load it in TIC-80 to play.
+🕹️ [Play it here](https://1j01.github.io/makisu/tic-80/), or download the [cartridge file](./makisu.tic) and load it in TIC-80.
 
 Features:
 - Lovely pixel art for lots of sushi ingredients (not all are used in the game)
@@ -27,7 +27,7 @@ This is a sushi making simulator using [THREE.js](https://threejs.org/), written
 
 It uses [cannon-es](https://github.com/pmndrs/cannon-es) for physics.
 
-🕹️ Play it [here](https://1j01.github.io/makisu/)!
+🕹️ [Play it here](https://1j01.github.io/makisu/).
 
 Features:
 - Toolbar with camera and interaction tools
