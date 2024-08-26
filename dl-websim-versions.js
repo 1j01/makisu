@@ -794,17 +794,17 @@ is "justifying" the complexity of the collision handler.`,
   drag offset handling is canceling out the lift height.`,
 	},
 	// omitting this version as it had significant regressions
-// 	{
-// 		"prompt": "- For small screens, allow the space between the icons in the toolbar to shrink as needed, and hide settings in a cog icon menu, and adding actions in a plus icon menu. Make these circular buttons with flyouts, rather than modals. Remove the object counts.\n- For touch, configure OrbitControls's `controls.touches` in `setMode`, and make rotation continuous while pressing the rotate left/right buttons.\n- Instead of having a separate drag plane, just project to the ground plane, with a configurable \"lift height\" (default 0.3); smoothly animate lifting objects to this height over a configurable \"lift time\" (default 300ms). Remove debug viz.\n- Highlight objects that will be affected by the current tool (none for camera tools, one for pinch tool, multiple for hand tool) instead of always one mesh.\n- Make sure grabbed objects rotate around their collective center.\n- Add shadows, with a directional light pointing straight down.",
-// 		"id": "CqvUrOjveBr3hyf3z",
-// 		"commitSummary": "Improve mobile UI, drag interaction, and add shadows.",
-// 		"commitNote": `Note: I saw significant regressions in this version;
-// The AI may be forgetting things at this scale.
-// Also, it didn't shrink the toolbar "as needed" as I asked,
-// but just compacted it, removing the divider as well. I was hoping for a more flexible layout.
-// It did add the cog and plus icon buttons with menus as requested,
-// although with major contrast issues.`,
-// 	}
+	// 	{
+	// 		"prompt": "- For small screens, allow the space between the icons in the toolbar to shrink as needed, and hide settings in a cog icon menu, and adding actions in a plus icon menu. Make these circular buttons with flyouts, rather than modals. Remove the object counts.\n- For touch, configure OrbitControls's `controls.touches` in `setMode`, and make rotation continuous while pressing the rotate left/right buttons.\n- Instead of having a separate drag plane, just project to the ground plane, with a configurable \"lift height\" (default 0.3); smoothly animate lifting objects to this height over a configurable \"lift time\" (default 300ms). Remove debug viz.\n- Highlight objects that will be affected by the current tool (none for camera tools, one for pinch tool, multiple for hand tool) instead of always one mesh.\n- Make sure grabbed objects rotate around their collective center.\n- Add shadows, with a directional light pointing straight down.",
+	// 		"id": "CqvUrOjveBr3hyf3z",
+	// 		"commitSummary": "Improve mobile UI, drag interaction, and add shadows.",
+	// 		"commitNote": `Note: I saw significant regressions in this version;
+	// The AI may be forgetting things at this scale.
+	// Also, it didn't shrink the toolbar "as needed" as I asked,
+	// but just compacted it, removing the divider as well. I was hoping for a more flexible layout.
+	// It did add the cog and plus icon buttons with menus as requested,
+	// although with major contrast issues.`,
+	// 	}
 ];
 
 async function downloadVersions(versions, outputDirectory, outputFileName) {

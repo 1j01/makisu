@@ -1,52 +1,62 @@
-<html><head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Sushi Simulator - Enhanced Interactions</title>
-<link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="./libs/font-awesome-6.6.0-all.min.css">
-</head>
-<body>
-<div id="scene-container"></div>
-<div id="ingredient-panel" class="ui-panel">
-  <button id="add-rice" class="button">Add Rice</button>
-  <button id="add-nori" class="button">Add Nori</button>
-  <button id="add-fish" class="button">Add Fish</button>
-  <button id="add-bamboo" class="button">Add Bamboo Mat</button>
-  <div id="ingredient-counter">
-    <div>Rice grains: <span id="rice-count">0</span></div>
-    <div>Nori sheets: <span id="nori-count">0</span></div>
-    <div>Fish slices: <span id="fish-count">0</span></div>
-    <div>Bamboo mats: <span id="bamboo-count">0</span></div>
-  </div>
-</div>
-<div id="toolbar" class="ui-panel">
-  <button id="camera-rotate" class="button toolbar-button" title="Rotate Camera"><i class="fas fa-sync-alt"></i></button>
-  <button id="camera-pan" class="button toolbar-button" title="Pan Camera"><i class="fas fa-arrows-alt"></i></button>
-  <button id="camera-zoom" class="button toolbar-button" title="Zoom Camera"><i class="fas fa-search"></i></button>
-  <div class="toolbar-divider"></div>
-  <button id="interact-move" class="button toolbar-button active" title="Move Ingredients"><i class="fas fa-hand-paper"></i></button>
-  <button id="interact-pinch" class="button toolbar-button" title="Pinch Ingredients"><i class="fas fa-hand-lizard"></i></button>
-  <button id="interact-delete" class="button toolbar-button" title="Delete Ingredients"><i class="fas fa-trash-alt"></i></button>
-</div>
-<div id="rotate-buttons" class="ui-panel">
-  <button id="rotate-left" class="button toolbar-button" title="Rotate Left"><i class="fas fa-undo"></i></button>
-  <button id="rotate-right" class="button toolbar-button" title="Rotate Right"><i class="fas fa-redo"></i></button>
-</div>
-<div id="debug-panel" class="ui-panel">
-  <input type="checkbox" id="debug-toggle">
-  <label for="debug-toggle">Debug Visualization</label>
-  <br>
-  <label for="constraint-threshold">Constraint Break Threshold:</label>
-  <input type="number" id="constraint-threshold" value="1" min="0" step="0.1">
-  <br>
-  <label for="rice-size">Rice Size:</label>
-  <input type="number" id="rice-size" value="0.05" min="0.01" step="0.01">
-  <br>
-  <label for="drag-plane-height">Drag Plane Height:</label>
-  <input type="number" id="drag-plane-height" value="0.1" min="0" step="0.01">
-</div>
+<html>
 
-<script type="importmap">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>3D Sushi Simulator - Enhanced Interactions</title>
+	<link rel="stylesheet" href="styles.css">
+	<link rel="stylesheet" href="./libs/font-awesome-6.6.0-all.min.css">
+</head>
+
+<body>
+	<div id="scene-container"></div>
+	<div id="ingredient-panel" class="ui-panel">
+		<button id="add-rice" class="button">Add Rice</button>
+		<button id="add-nori" class="button">Add Nori</button>
+		<button id="add-fish" class="button">Add Fish</button>
+		<button id="add-bamboo" class="button">Add Bamboo Mat</button>
+		<div id="ingredient-counter">
+			<div>Rice grains: <span id="rice-count">0</span></div>
+			<div>Nori sheets: <span id="nori-count">0</span></div>
+			<div>Fish slices: <span id="fish-count">0</span></div>
+			<div>Bamboo mats: <span id="bamboo-count">0</span></div>
+		</div>
+	</div>
+	<div id="toolbar" class="ui-panel">
+		<button id="camera-rotate" class="button toolbar-button" title="Rotate Camera"><i
+				class="fas fa-sync-alt"></i></button>
+		<button id="camera-pan" class="button toolbar-button" title="Pan Camera"><i
+				class="fas fa-arrows-alt"></i></button>
+		<button id="camera-zoom" class="button toolbar-button" title="Zoom Camera"><i
+				class="fas fa-search"></i></button>
+		<div class="toolbar-divider"></div>
+		<button id="interact-move" class="button toolbar-button active" title="Move Ingredients"><i
+				class="fas fa-hand-paper"></i></button>
+		<button id="interact-pinch" class="button toolbar-button" title="Pinch Ingredients"><i
+				class="fas fa-hand-lizard"></i></button>
+		<button id="interact-delete" class="button toolbar-button" title="Delete Ingredients"><i
+				class="fas fa-trash-alt"></i></button>
+	</div>
+	<div id="rotate-buttons" class="ui-panel">
+		<button id="rotate-left" class="button toolbar-button" title="Rotate Left"><i class="fas fa-undo"></i></button>
+		<button id="rotate-right" class="button toolbar-button" title="Rotate Right"><i
+				class="fas fa-redo"></i></button>
+	</div>
+	<div id="debug-panel" class="ui-panel">
+		<input type="checkbox" id="debug-toggle">
+		<label for="debug-toggle">Debug Visualization</label>
+		<br>
+		<label for="constraint-threshold">Constraint Break Threshold:</label>
+		<input type="number" id="constraint-threshold" value="1" min="0" step="0.1">
+		<br>
+		<label for="rice-size">Rice Size:</label>
+		<input type="number" id="rice-size" value="0.05" min="0.01" step="0.01">
+		<br>
+		<label for="drag-plane-height">Drag Plane Height:</label>
+		<input type="number" id="drag-plane-height" value="0.1" min="0" step="0.01">
+	</div>
+
+	<script type="importmap">
 {
   "imports": {
     "three": "./libs/three.module.js"
@@ -54,5 +64,5 @@
 }
 </script>
 
-<script type="module" src="main.js"></script>
+	<script type="module" src="main.js"></script>
 </body>

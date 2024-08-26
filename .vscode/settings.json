@@ -1,4 +1,9 @@
 {
+	"editor.formatOnSave": true,
+	"editor.detectIndentation": false,
+	"editor.insertSpaces": false,
+	"files.insertFinalNewline": true,
+	"files.trimTrailingWhitespace": true,
 	"cSpell.words": [
 		"axonometric",
 		"Damacy",

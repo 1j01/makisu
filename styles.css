@@ -1,83 +1,99 @@
 body {
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  font-family: Arial, sans-serif;
-  background-color: #f0f0f0;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+	font-family: Arial, sans-serif;
+	background-color: #f0f0f0;
 }
+
 #scene-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  touch-action: none;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	touch-action: none;
 }
+
 .ui-panel {
-  position: absolute;
-  background-color: rgba(0, 0, 0, 0.7);
-  padding: 10px;
-  border-radius: 5px;
-  color: white;
+	position: absolute;
+	background-color: rgba(0, 0, 0, 0.7);
+	padding: 10px;
+	border-radius: 5px;
+	color: white;
 }
+
 #ingredient-panel {
-  top: 10px;
-  left: 10px;
+	top: 10px;
+	left: 10px;
 }
+
 #toolbar {
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  justify-content: center;
-  align-items: center;
+	bottom: 10px;
+	left: 50%;
+	transform: translateX(-50%);
+	display: flex;
+	justify-content: center;
+	align-items: center;
 }
+
 .button {
-  background-color: transparent;
-  border: none;
-  color: white;
-  font-size: 16px;
-  margin: 0 10px;
-  cursor: pointer;
-  transition: color 0.3s ease;
-  padding: 5px 10px;
+	background-color: transparent;
+	border: none;
+	color: white;
+	font-size: 16px;
+	margin: 0 10px;
+	cursor: pointer;
+	transition: color 0.3s ease;
+	padding: 5px 10px;
 }
+
 .button:hover {
-  color: #ffd700;
+	color: #ffd700;
 }
+
 .button.active {
-  color: #ffd700;
+	color: #ffd700;
 }
+
 .toolbar-button {
-  font-size: 24px;
+	font-size: 24px;
 }
+
 #ingredient-counter {
-  margin-top: 10px;
-  font-size: 14px;
+	margin-top: 10px;
+	font-size: 14px;
 }
+
 #debug-panel {
-  top: 10px;
-  right: 10px;
+	top: 10px;
+	right: 10px;
 }
+
 #debug-panel label {
-  margin-left: 5px;
+	margin-left: 5px;
 }
+
 .toolbar-divider {
-  width: 1px;
-  height: 24px;
-  background-color: white;
-  margin: 0 10px;
+	width: 1px;
+	height: 24px;
+	background-color: white;
+	margin: 0 10px;
 }
-#constraint-threshold, #rice-size, #drag-plane-height {
-  width: 50px;
+
+#constraint-threshold,
+#rice-size,
+#drag-plane-height {
+	width: 50px;
 }
+
 #rotate-buttons {
-  display: none;
-  position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: rgba(0, 0, 0, 0.7);
-  padding: 10px;
-  border-radius: 5px;
+	display: none;
+	position: absolute;
+	bottom: 10px;
+	left: 50%;
+	transform: translateX(-50%);
+	background-color: rgba(0, 0, 0, 0.7);
+	padding: 10px;
+	border-radius: 5px;
 }
