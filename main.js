@@ -18,7 +18,7 @@ let isDragging = false;
 let dragPlane;
 let dragPlaneMesh;
 let highlightedObjects = [];
-let debugVisualizationEnabled = false;
+let debugVisualizationEnabled = document.getElementById('debug-toggle').checked;
 let groundPlane;
 let dragStartOffsets = [];
 let constraintBreakThreshold = 1;
@@ -323,7 +323,8 @@ function onPointerDown(event) {
 			isDragging = true;
 			controls.enabled = false;
 
-			dragPlaneMesh.position.set(0, dragPlaneHeight, 0);
+			dragPlaneMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dragPlane.normal);
+			dragPlaneMesh.position.set(0, dragPlane.constant, 0).applyQuaternion(dragPlaneMesh.quaternion);
 			dragPlaneMesh.visible = debugVisualizationEnabled;
 
 			// Store the initial offsets for all selected objects
