@@ -81,9 +81,13 @@ body {
 	margin: 0 10px;
 }
 
-#constraint-threshold,
-#rice-size,
-#drag-plane-height {
+.control-row {
+	display: flex;
+	align-items: center;
+	margin: 5px 0;
+}
+
+.control-row input[type="number"] {
 	width: 50px;
 }
 
