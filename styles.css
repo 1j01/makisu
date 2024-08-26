@@ -87,6 +87,10 @@ body {
 	margin: 5px 0;
 }
 
+.control-row:not(.checkbox-control-row) {
+	justify-content: space-between;
+}
+
 .control-row input[type="number"] {
 	width: 50px;
 }
