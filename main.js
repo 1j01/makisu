@@ -17,7 +17,6 @@ let selectedObjects = [];
 let isDragging = false;
 let dragPlane;
 let dragPlaneMesh;
-let debugMesh;
 let highlightedObjects = [];
 let debugVisualizationEnabled = false;
 let groundPlane;
@@ -86,13 +85,6 @@ function init() {
 	dragPlaneMesh.name = 'dragPlane';
 	scene.add(dragPlaneMesh);
 
-	const debugGeometry = new THREE.SphereGeometry(0.05, 32, 32);
-	const debugMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-	debugMesh = new THREE.Mesh(debugGeometry, debugMaterial);
-	debugMesh.visible = false;
-	debugMesh.name = 'debugMesh';
-	scene.add(debugMesh);
-
 	document.getElementById('add-rice').addEventListener('click', addRiceBatch);
 	document.getElementById('add-nori').addEventListener('click', addNori);
 	document.getElementById('add-fish').addEventListener('click', addFish);
@@ -106,7 +98,6 @@ function init() {
 
 	document.getElementById('debug-toggle').addEventListener('change', (e) => {
 		debugVisualizationEnabled = e.target.checked;
-		updateDebugVisualization();
 	});
 
 	document.getElementById('constraint-threshold').addEventListener('input', (e) => {
@@ -220,8 +211,6 @@ function setMode(mode) {
 	} else if (mode === 'interact-move' || mode === 'interact-pinch' || mode === 'interact-delete') {
 		controls.mouseButtons.LEFT = null;
 	}
-
-	updateDebugVisualization();
 }
 
 function updateHover() {
@@ -288,10 +277,6 @@ function updateCursor() {
 			renderer.domElement.style.cursor = highlightedObjects.length ? 'crosshair' : 'default';
 			break;
 	}
-}
-
-function updateDebugVisualization() {
-	debugMesh.visible = debugVisualizationEnabled && (currentMode === 'interact-move' || currentMode === 'interact-pinch' || currentMode === 'interact-delete');
 }
 
 function updatePointerAndRaycaster(event) {
@@ -363,13 +348,6 @@ function deleteObjects(objectsToDelete) {
 
 function onPointerMove(event) {
 	updatePointerAndRaycaster(event);
-
-	if (debugMesh.visible) {
-		const intersects = raycaster.intersectObjects(scene.children.filter(obj => obj.name !== 'debugMesh' && obj.name !== 'ground' && obj.name !== 'dragPlane'));
-		if (intersects.length > 0) {
-			debugMesh.position.copy(intersects[0].point);
-		}
-	}
 
 	updateHover();
 }
