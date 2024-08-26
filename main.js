@@ -16,13 +16,13 @@ let currentMode = 'interact-move';
 let selectedObjects = [];
 let isDragging = false;
 let highlightedObjects = [];
-let debugVisualizationEnabled = document.getElementById('debug-toggle').checked;
 let groundPlane;
 let dragStartOffsets = [];
 let constraintBreakThreshold = 1;
-let riceSize = 0.05;
-let liftHeight = 0.1;
-let liftDuration = 0.5;
+let debugVisualizationEnabled = document.getElementById('debug-toggle').checked;
+let riceSize = parseFloat(document.getElementById('rice-size').value);
+let liftHeight = parseFloat(document.getElementById('lift-height').value);
+let liftDuration = parseFloat(document.getElementById('lift-time').value);
 let liftFraction = 0; // for animating lift
 let rotationSpeed = 0.05;
 
