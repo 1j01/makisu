@@ -5,6 +5,8 @@ import * as CANNON from './libs/cannon-es.js';
 
 let scene, camera, renderer, world, controls, raycaster, mouse;
 let timeStep = 1 / 60;
+// TODO: change stupid "ingredient" terminology applying to all objects
+// and "selected" should be "dragging"
 let sushiIngredients = [];
 let riceCount = 0;
 let noriCount = 0;
@@ -16,7 +18,7 @@ let isDragging = false;
 let dragPlane;
 let dragPlaneMesh;
 let debugMesh;
-let highlightedObject = null;
+let highlightedObjects = [];
 let debugVisualizationEnabled = false;
 let groundPlane;
 let dragStartOffsets = [];
@@ -223,16 +225,44 @@ function setMode(mode) {
 }
 
 function updateHover() {
-	const intersects = raycaster.intersectObjects(sushiIngredients.map(item => item.mesh));
-	if (intersects.length > 0) {
-		if (highlightedObject && highlightedObject !== intersects[0].object) {
-			highlightedObject.material.emissive.setHex(0x000000);
+	for (const highlightedObject of highlightedObjects) {
+		// TODO: maybe avoid unnecessary calls to setHex? not sure if it's expensive
+		highlightedObject.mesh.material.emissive.setHex(0x000000);
+	}
+	if (!isDragging) {
+		highlightedObjects = [];
+
+		const intersects = raycaster.intersectObjects(sushiIngredients.map(item => item.mesh));
+		if (intersects.length > 0 && (currentMode === 'interact-move' || currentMode === 'interact-pinch' || currentMode === 'interact-delete')) {
+			const hoveredObject = intersects[0].object;
+			const hoveredIngredient = sushiIngredients.find(item => item.mesh === hoveredObject);
+
+			if (currentMode === 'interact-move' || currentMode === 'interact-delete') {
+				if (hoveredIngredient.type === 'rice') {
+					// Select all rice grains within the selection radius
+					const riceSelectionRadius = currentMode === 'interact-delete' ? RICE_DELETION_RADIUS : RICE_SELECTION_RADIUS;
+					sushiIngredients.forEach(ingredient => {
+						if (ingredient.type === 'rice' && ingredient.mesh.position.distanceTo(hoveredObject.position) <= riceSelectionRadius) {
+							highlightedObjects.push(ingredient);
+						}
+					});
+				} else {
+					// For other object types, select all parts of the specific logical object
+					const objectId = hoveredIngredient.objectId;
+					sushiIngredients.forEach(ingredient => {
+						if (ingredient.objectId === objectId) {
+							highlightedObjects.push(ingredient);
+						}
+					});
+				}
+			} else if (currentMode === 'interact-pinch') {
+				// Select only the clicked object
+				highlightedObjects.push(hoveredIngredient);
+			}
 		}
-		highlightedObject = intersects[0].object;
-		highlightedObject.material.emissive.setHex(0x444444);
-	} else if (highlightedObject) {
-		highlightedObject.material.emissive.setHex(0x000000);
-		highlightedObject = null;
+	}
+	for (const highlightedObject of highlightedObjects) {
+		highlightedObject.mesh.material.emissive.setHex(currentMode === 'interact-delete' ? 0xff0000 : 0x444444);
 	}
 	updateCursor();
 }
@@ -249,13 +279,13 @@ function updateCursor() {
 			renderer.domElement.style.cursor = 'zoom-in';
 			break;
 		case 'interact-move':
-			renderer.domElement.style.cursor = isDragging ? 'grabbing' : (highlightedObject ? 'grab' : 'default');
+			renderer.domElement.style.cursor = isDragging ? 'grabbing' : (highlightedObjects.length ? 'grab' : 'default');
 			break;
 		case 'interact-pinch':
-			renderer.domElement.style.cursor = isDragging ? 'grabbing' : (highlightedObject ? 'grab' : 'default');
+			renderer.domElement.style.cursor = isDragging ? 'grabbing' : (highlightedObjects.length ? 'grab' : 'default');
 			break;
 		case 'interact-delete':
-			renderer.domElement.style.cursor = 'crosshair';
+			renderer.domElement.style.cursor = highlightedObjects.length ? 'crosshair' : 'default';
 			break;
 	}
 }
@@ -275,46 +305,25 @@ function onPointerDown(event) {
 	event.preventDefault();
 	updatePointerAndRaycaster(event);
 
-	const intersects = raycaster.intersectObjects(sushiIngredients.map(item => item.mesh));
+	if (highlightedObjects.length > 0) {
+		selectedObjects = highlightedObjects.slice();
+		dragStartOffsets = [];
+		const selectedIngredientType = selectedObjects[0].type;
 
-	if (intersects.length > 0) {
 		if (currentMode === 'interact-move' || currentMode === 'interact-pinch') {
-			selectedObjects = [];
-			dragStartOffsets = [];
-			const selectedObject = intersects[0].object;
-			const selectedIngredient = sushiIngredients.find(item => item.mesh === selectedObject);
-
-			if (currentMode === 'interact-move') {
-				if (selectedIngredient.type === 'rice') {
-					// Select all rice grains within the selection radius
-					sushiIngredients.forEach(ingredient => {
-						if (ingredient.type === 'rice' && ingredient.mesh.position.distanceTo(selectedObject.position) <= RICE_SELECTION_RADIUS) {
-							selectedObjects.push(ingredient);
-						}
-					});
-					// Break connections between the dragged rice and other objects
-					selectedObjects.forEach(rice => {
-						if (rice.stuckObjects) {
-							rice.stuckObjects.forEach((constraint, otherIngredient) => {
-								if (!selectedObjects.includes(otherIngredient)) {
-									world.removeConstraint(constraint);
-									rice.stuckObjects.delete(otherIngredient);
-								}
-							});
-						}
-					});
-				} else {
-					// For other ingredients, select all parts of the specific logical object
-					const objectId = selectedIngredient.objectId;
-					sushiIngredients.forEach(ingredient => {
-						if (ingredient.objectId === objectId) {
-							selectedObjects.push(ingredient);
-						}
-					});
-				}
-			} else if (currentMode === 'interact-pinch') {
-				// Select only the clicked object
-				selectedObjects.push(selectedIngredient);
+			if (selectedIngredientType === 'rice') {
+				// Break connections between the dragged rice and other objects
+				// TODO: prevent connections from re-forming while dragging
+				selectedObjects.forEach(rice => {
+					if (rice.stuckObjects) {
+						rice.stuckObjects.forEach((constraint, otherIngredient) => {
+							if (!selectedObjects.includes(otherIngredient)) {
+								world.removeConstraint(constraint);
+								rice.stuckObjects.delete(otherIngredient);
+							}
+						});
+					}
+				});
 			}
 
 			isDragging = true;
@@ -337,20 +346,7 @@ function onPointerDown(event) {
 				document.getElementById('rotate-buttons').style.display = 'flex';
 			}
 		} else if (currentMode === 'interact-delete') {
-			const deletedObject = intersects[0].object;
-			const deletedIngredient = sushiIngredients.find(item => item.mesh === deletedObject);
-
-			if (deletedIngredient.type === 'rice') {
-				// Delete all rice grains within the deletion radius
-				const objectsToDelete = sushiIngredients.filter(ingredient =>
-					ingredient.type === 'rice' && ingredient.mesh.position.distanceTo(deletedObject.position) <= RICE_DELETION_RADIUS
-				);
-				deleteObjects(objectsToDelete);
-			} else {
-				// For other ingredients, delete all parts of the specific logical object
-				const objectsToDelete = sushiIngredients.filter(ingredient => ingredient.objectId === deletedIngredient.objectId);
-				deleteObjects(objectsToDelete);
-			}
+			deleteObjects(highlightedObjects);
 		}
 	}
 	updateCursor();
