@@ -149,14 +149,22 @@ function rotateSelectedObjects(angle) {
 		selectedObjects.forEach(obj => center.add(obj.mesh.position));
 		center.divideScalar(selectedObjects.length);
 
+		const rotationAxis = new THREE.Vector3(0, 1, 0);
+		const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(rotationAxis, angle);
+
 		selectedObjects.forEach(obj => {
-			const localPos = obj.mesh.position.sub(center);
-			localPos.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+			const localPos = obj.mesh.position.clone().sub(center);
+			localPos.applyQuaternion(rotationQuaternion);
+
 			obj.mesh.position.copy(localPos.add(center));
+			obj.mesh.quaternion.premultiply(rotationQuaternion);
+
+			// Update physics body
 			obj.body.position.copy(obj.mesh.position);
-			obj.mesh.rotateY(angle);
 			obj.body.quaternion.copy(obj.mesh.quaternion);
 		});
+		// Update drag offsets
+		dragStartOffsets.forEach(offset => offset.applyQuaternion(rotationQuaternion));
 	}
 }
 
