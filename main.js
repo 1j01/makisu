@@ -8,10 +8,12 @@ let timeStep = 1 / 60;
 // TODO: change stupid "ingredient" terminology applying to all objects
 // and "selected" should be "dragging"
 let sushiIngredients = [];
-let riceCount = 0;
-let noriCount = 0;
-let fishCount = 0;
-let bambooCount = 0;
+let counts = {
+	rice: 0,
+	nori: 0,
+	fish: 0,
+	bamboo: 0,
+};
 let currentMode = 'interact-move';
 let selectedObjects = [];
 let isDragging = false;
@@ -522,24 +524,8 @@ function addBambooMat() {
 }
 
 function updateIngredientCounter(type, change) {
-	switch (type) {
-		case 'rice':
-			riceCount += change;
-			document.getElementById('rice-count').textContent = riceCount;
-			break;
-		case 'nori':
-			noriCount += change;
-			document.getElementById('nori-count').textContent = noriCount;
-			break;
-		case 'fish':
-			fishCount += change;
-			document.getElementById('fish-count').textContent = fishCount;
-			break;
-		case 'bamboo':
-			bambooCount += change;
-			document.getElementById('bamboo-count').textContent = bambooCount;
-			break;
-	}
+	counts[type] += change;
+	document.getElementById(type + '-count').textContent = counts[type];
 }
 
 function animate() {
