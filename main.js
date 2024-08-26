@@ -102,6 +102,10 @@ function init() {
 		liftHeight = parseFloat(e.target.value);
 	});
 
+	document.getElementById('lift-time').addEventListener('input', (e) => {
+		liftDuration = parseFloat(e.target.value);
+	});
+
 	renderer.domElement.addEventListener('pointerdown', onPointerDown);
 	renderer.domElement.addEventListener('pointermove', onPointerMove);
 	renderer.domElement.addEventListener('pointerup', onPointerUp);
