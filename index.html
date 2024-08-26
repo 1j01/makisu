@@ -44,7 +44,8 @@
 				class="fas fa-redo"></i></button>
 	</div>
 	<div id="debug-panel" class="ui-panel">
-		<div class="control-row checkbox-control-row">
+		<!-- There is no debug visualization currently (previous visualizations have been removed) -->
+		<div class="control-row checkbox-control-row" hidden>
 			<input type="checkbox" id="debug-toggle">
 			<label for="debug-toggle">Debug Visualization</label>
 		</div>
@@ -57,8 +58,8 @@
 			<input type="number" id="rice-size" value="0.05" min="0.01" step="0.01">
 		</div>
 		<div class="control-row">
-			<label for="drag-plane-height">Drag Plane Height:</label>
-			<input type="number" id="drag-plane-height" value="0.1" min="0" step="0.01">
+			<label for="lift-height">Lift Height:</label>
+			<input type="number" id="lift-height" value="0.1" min="0" step="0.01">
 		</div>
 	</div>
 	<div id="info"

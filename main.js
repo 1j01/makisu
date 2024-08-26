@@ -15,15 +15,15 @@ let bambooCount = 0;
 let currentMode = 'interact-move';
 let selectedObjects = [];
 let isDragging = false;
-let dragPlane;
-let dragPlaneMesh;
 let highlightedObjects = [];
 let debugVisualizationEnabled = document.getElementById('debug-toggle').checked;
 let groundPlane;
 let dragStartOffsets = [];
 let constraintBreakThreshold = 1;
 let riceSize = 0.05;
-let dragPlaneHeight = 0.1;
+let liftHeight = 0.1;
+let liftDuration = 0.5;
+let liftFraction = 0; // for animating lift
 let rotationSpeed = 0.05;
 
 const RICE_SELECTION_RADIUS = 0.2;
@@ -74,19 +74,6 @@ function init() {
 	scene.add(groundMesh);
 
 	groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-	dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -dragPlaneHeight);
-
-	const dragPlaneGeometry = new THREE.PlaneGeometry(10, 10);
-	const dragPlaneMaterial = new THREE.MeshBasicMaterial({
-		color: 0x00ff00,
-		transparent: true,
-		opacity: 0.2,
-		side: THREE.DoubleSide
-	});
-	dragPlaneMesh = new THREE.Mesh(dragPlaneGeometry, dragPlaneMaterial);
-	dragPlaneMesh.visible = false;
-	dragPlaneMesh.name = 'dragPlane';
-	scene.add(dragPlaneMesh);
 
 	document.getElementById('add-rice').addEventListener('click', addRiceBatch);
 	document.getElementById('add-nori').addEventListener('click', addNori);
@@ -111,9 +98,8 @@ function init() {
 		riceSize = parseFloat(e.target.value);
 	});
 
-	document.getElementById('drag-plane-height').addEventListener('input', (e) => {
-		dragPlaneHeight = parseFloat(e.target.value);
-		dragPlane.constant = -dragPlaneHeight;
+	document.getElementById('lift-height').addEventListener('input', (e) => {
+		liftHeight = parseFloat(e.target.value);
 	});
 
 	renderer.domElement.addEventListener('pointerdown', onPointerDown);
@@ -323,13 +309,9 @@ function onPointerDown(event) {
 			isDragging = true;
 			controls.enabled = false;
 
-			dragPlaneMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dragPlane.normal);
-			dragPlaneMesh.position.set(0, dragPlane.constant, 0).applyQuaternion(dragPlaneMesh.quaternion);
-			dragPlaneMesh.visible = debugVisualizationEnabled;
-
 			// Store the initial offsets for all selected objects
 			const intersection = new THREE.Vector3();
-			raycaster.ray.intersectPlane(dragPlane, intersection);
+			raycaster.ray.intersectPlane(groundPlane, intersection);
 			selectedObjects.forEach(object => {
 				const offset = new THREE.Vector3().subVectors(object.mesh.position, intersection);
 				dragStartOffsets.push(offset);
@@ -375,7 +357,6 @@ function onPointerUp(event) {
 	selectedObjects = [];
 	dragStartOffsets = [];
 	controls.enabled = true;
-	dragPlaneMesh.visible = false;
 	updateCursor();
 
 	// Hide rotate buttons and show toolbar for touch devices
@@ -577,18 +558,23 @@ function animate() {
 	});
 
 	if (isDragging && selectedObjects.length > 0) {
+
+		liftFraction += timeStep / liftDuration;
+		liftFraction = Math.min(liftFraction, 1);
+
 		const intersection = new THREE.Vector3();
-		raycaster.ray.intersectPlane(dragPlane, intersection);
+		raycaster.ray.intersectPlane(groundPlane, intersection);
 
 		selectedObjects.forEach((object, index) => {
 			const targetPosition = new THREE.Vector3().addVectors(intersection, dragStartOffsets[index]);
+			targetPosition.y += liftHeight * liftFraction;
 			object.mesh.position.copy(targetPosition);
 			object.body.position.copy(targetPosition);
 			object.body.velocity.set(0, 0, 0);
 			object.body.angularVelocity.set(0, 0, 0);
 		});
-
-		dragPlaneMesh.position.copy(intersection);
+	} else {
+		liftFraction = 0;
 	}
 
 	controls.update();
