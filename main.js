@@ -34,12 +34,15 @@ function init() {
 	camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 	renderer = new THREE.WebGLRenderer({ antialias: true });
 	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.shadowMap.enabled = true;
+	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 	document.getElementById('scene-container').appendChild(renderer.domElement);
 
 	const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
 	scene.add(ambientLight);
 	const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
 	directionalLight.position.set(10, 20, 10);
+	directionalLight.castShadow = true;
 	scene.add(directionalLight);
 
 	camera.position.set(0, 5, 10);
@@ -67,6 +70,7 @@ function init() {
 	const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
 	groundMesh.rotation.x = -Math.PI / 2;
 	groundMesh.name = 'ground';
+	groundMesh.receiveShadow = true;
 	scene.add(groundMesh);
 
 	groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -384,6 +388,8 @@ function addRice() {
 	const riceMaterial = new THREE.MeshStandardMaterial({ color: 0xfffaf0 });
 	const riceMesh = new THREE.Mesh(riceGeometry, riceMaterial);
 	riceMesh.userData.type = 'rice';
+	riceMesh.castShadow = true;
+	riceMesh.receiveShadow = true;
 
 	const riceShape = new CANNON.Sphere(riceSize);
 	const riceBody = new CANNON.Body({
@@ -416,6 +422,8 @@ function addNori() {
 		const noriMaterial = new THREE.MeshStandardMaterial({ color: 0x1a4c1a });
 		const noriMesh = new THREE.Mesh(segmentGeometry, noriMaterial);
 		noriMesh.userData.type = 'nori';
+		noriMesh.castShadow = true;
+		noriMesh.receiveShadow = true;
 
 		const noriShape = new CANNON.Box(new CANNON.Vec3(segmentWidth / 2, noriHeight / 2, noriDepth / 2));
 		const noriBody = new CANNON.Body({
@@ -453,6 +461,8 @@ function addFish() {
 	const fishMaterial = new THREE.MeshStandardMaterial({ color: 0xfa8072 });
 	const fishMesh = new THREE.Mesh(fishGeometry, fishMaterial);
 	fishMesh.userData.type = 'fish';
+	fishMesh.castShadow = true;
+	fishMesh.receiveShadow = true;
 
 	const fishShape = new CANNON.Box(new CANNON.Vec3(0.2, 0.05, 0.1));
 	const fishBody = new CANNON.Body({
@@ -483,6 +493,8 @@ function addBambooMat() {
 		const bambooMaterial = new THREE.MeshStandardMaterial({ color: 0x90EE90 }); // Light green color
 		const bambooMesh = new THREE.Mesh(segmentGeometry, bambooMaterial);
 		bambooMesh.userData.type = 'bamboo';
+		bambooMesh.castShadow = true;
+		bambooMesh.receiveShadow = true;
 
 		const bambooShape = new CANNON.Box(new CANNON.Vec3(segmentWidth / 2, matHeight / 2, matDepth / 2));
 		const bambooBody = new CANNON.Body({
