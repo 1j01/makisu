@@ -336,11 +336,20 @@ function onPointerDown(event) {
 }
 
 function deleteObjects(objectsToDelete) {
+	// Ugly, I wouldn't do it like this from first principles,
+	// I'm just fixing the AI's counting bug
+	// It would probably be better to count everything from the current state every time (adding and removing)
+	const isGroup = ["nori", "bamboo"].includes(objectsToDelete[0].type);
 	objectsToDelete.forEach(ingredient => {
 		scene.remove(ingredient.mesh);
 		world.removeBody(ingredient.body);
-		updateIngredientCounter(ingredient.type, -1);
+		if (!isGroup) {
+			updateIngredientCounter(ingredient.type, -1);
+		}
 	});
+	if (isGroup) {
+		updateIngredientCounter(objectsToDelete[0].type, -1);
+	}
 	sushiIngredients = sushiIngredients.filter(ingredient => !objectsToDelete.includes(ingredient));
 }
 
