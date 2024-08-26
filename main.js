@@ -222,6 +222,21 @@ function setMode(mode) {
 	updateDebugVisualization();
 }
 
+function updateHover() {
+	const intersects = raycaster.intersectObjects(sushiIngredients.map(item => item.mesh));
+	if (intersects.length > 0) {
+		if (highlightedObject && highlightedObject !== intersects[0].object) {
+			highlightedObject.material.emissive.setHex(0x000000);
+		}
+		highlightedObject = intersects[0].object;
+		highlightedObject.material.emissive.setHex(0x444444);
+	} else if (highlightedObject) {
+		highlightedObject.material.emissive.setHex(0x000000);
+		highlightedObject = null;
+	}
+	updateCursor();
+}
+
 function updateCursor() {
 	switch (currentMode) {
 		case 'camera-rotate':
@@ -360,18 +375,7 @@ function onPointerMove(event) {
 		}
 	}
 
-	const intersects = raycaster.intersectObjects(sushiIngredients.map(item => item.mesh));
-	if (intersects.length > 0) {
-		if (highlightedObject && highlightedObject !== intersects[0].object) {
-			highlightedObject.material.emissive.setHex(0x000000);
-		}
-		highlightedObject = intersects[0].object;
-		highlightedObject.material.emissive.setHex(0x444444);
-	} else if (highlightedObject) {
-		highlightedObject.material.emissive.setHex(0x000000);
-		highlightedObject = null;
-	}
-	updateCursor();
+	updateHover();
 }
 
 function onPointerUp(event) {
@@ -388,6 +392,7 @@ function onPointerUp(event) {
 		document.getElementById('rotate-buttons').style.display = 'none';
 	}
 }
+
 
 function addRiceBatch() {
 	for (let i = 0; i < 100; i++) {
