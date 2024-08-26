@@ -24,7 +24,6 @@ let dragStartOffsets = [];
 let constraintBreakThreshold = 1;
 let riceSize = 0.05;
 let dragPlaneHeight = 0.1;
-let rotationAngle = 0;
 let rotationSpeed = 0.05;
 
 const RICE_SELECTION_RADIUS = 0.2;
