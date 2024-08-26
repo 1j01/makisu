@@ -212,7 +212,12 @@ function setMode(mode) {
 	}
 }
 
-function updateHover() {
+function updateHover(event) {
+	const rect = renderer.domElement.getBoundingClientRect();
+	mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+	mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+	raycaster.setFromCamera(mouse, camera);
+
 	for (const highlightedObject of highlightedObjects) {
 		// TODO: maybe avoid unnecessary calls to setHex? not sure if it's expensive
 		highlightedObject.mesh.material.emissive.setHex(0x000000);
@@ -278,16 +283,9 @@ function updateCursor() {
 	}
 }
 
-function updatePointerAndRaycaster(event) {
-	const rect = renderer.domElement.getBoundingClientRect();
-	mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-	mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-	raycaster.setFromCamera(mouse, camera);
-}
-
 function onPointerDown(event) {
 	event.preventDefault();
-	updatePointerAndRaycaster(event);
+	updateHover(event);
 
 	if (highlightedObjects.length > 0) {
 		selectedObjects = highlightedObjects.slice();
@@ -333,6 +331,7 @@ function onPointerDown(event) {
 			deleteObjects(highlightedObjects);
 		}
 	}
+	// Cursor may change from starting a drag or deleting objects after `updateHover` above
 	updateCursor();
 }
 
@@ -346,9 +345,7 @@ function deleteObjects(objectsToDelete) {
 }
 
 function onPointerMove(event) {
-	updatePointerAndRaycaster(event);
-
-	updateHover();
+	updateHover(event);
 }
 
 function onPointerUp(event) {
