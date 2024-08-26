@@ -1,4 +1,4 @@
-<html><head><base href="https://3dsushimulator.com/">
+<html><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>3D Sushi Simulator - Enhanced Interactions</title>
@@ -87,7 +87,7 @@
     border-radius: 5px;
   }
 </style>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<link rel="stylesheet" href="./libs/font-awesome-6.6.0-all.min.css">
 </head>
 <body>
 <div id="scene-container"></div>
@@ -130,10 +130,18 @@
   <input type="number" id="drag-plane-height" value="0.1" min="0" step="0.01">
 </div>
 
+<script type="importmap">
+{
+  "imports": {
+    "three": "./libs/three.module.js"
+  }
+}
+</script>
+
 <script type="module">
-  import * as THREE from 'https://cdn.skypack.dev/three@0.132.2';
-  import { OrbitControls } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/controls/OrbitControls.js';
-  import * as CANNON from 'https://cdn.skypack.dev/cannon-es@0.20.0';
+  import * as THREE from 'three';
+  import { OrbitControls } from './libs/OrbitControls.js';
+  import * as CANNON from './libs/cannon-es.js';
 
   let scene, camera, renderer, world, controls, raycaster, mouse;
   let timeStep = 1 / 60;
