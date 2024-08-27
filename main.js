@@ -5,7 +5,9 @@ import * as CANNON from './libs/cannon-es.js';
 
 let scene, camera, renderer, world, controls, raycaster, mouse;
 let timeStep = 1 / 60;
+let objectIdCounter = 1;
 // TODO: change stupid "ingredient" terminology applying to all objects
+/** @type {{ mesh: THREE.Mesh, body: CANNON.Body, type: string, stuckObjects?: Map<any, CANNON.Constraint>, objectId: number }[]} */
 let sushiIngredients = [];
 let counts = {
 	rice: 0,
@@ -486,7 +488,7 @@ function addRice() {
 
 	scene.add(riceMesh);
 	world.addBody(riceBody);
-	sushiIngredients.push({ mesh: riceMesh, body: riceBody, type: 'rice', stuckObjects: new Map(), objectId: Date.now() });
+	sushiIngredients.push({ mesh: riceMesh, body: riceBody, type: 'rice', stuckObjects: new Map(), objectId: objectIdCounter++ });
 
 	updateIngredientCounter('rice', 1);
 }
@@ -496,7 +498,7 @@ function addNori() {
 	const noriHeight = 0.01;
 	const noriDepth = 1;
 	const segments = 10;
-	const objectId = Date.now();
+	const objectId = objectIdCounter++;
 
 	for (let i = 0; i < segments; i++) {
 		const segmentWidth = noriWidth / segments;
@@ -553,7 +555,7 @@ function addFish() {
 
 	scene.add(fishMesh);
 	world.addBody(fishBody);
-	sushiIngredients.push({ mesh: fishMesh, body: fishBody, type: 'fish', objectId: Date.now() });
+	sushiIngredients.push({ mesh: fishMesh, body: fishBody, type: 'fish', objectId: objectIdCounter++ });
 
 	updateIngredientCounter('fish', 1);
 }
@@ -563,7 +565,7 @@ function addBambooMat() {
 	const matHeight = 0.01;
 	const matDepth = 1;
 	const segments = 15;
-	const objectId = Date.now();
+	const objectId = objectIdCounter++;
 
 	for (let i = 0; i < segments; i++) {
 		const segmentWidth = matWidth / segments;
