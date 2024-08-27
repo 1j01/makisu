@@ -93,6 +93,7 @@ body {
 
 .toolbar-button {
 	font-size: 24px;
+	margin: min(10px, 1.5vw - 4px);
 }
 
 #ingredient-counter {
