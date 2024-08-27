@@ -88,6 +88,8 @@ function init() {
 	groundMesh.receiveShadow = true;
 	scene.add(groundMesh);
 
+	objects.push({ mesh: groundMesh, body: groundBody, type: 'ground' });
+
 	groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
 	// I'm tired, and I'm working within a bad framework decided by the AI
@@ -336,7 +338,7 @@ function updateHover(event) {
 	if (heldObjects.length === 0) {
 		highlightedObjects = [];
 
-		const intersects = raycaster.intersectObjects(objects.map(item => item.mesh));
+		const intersects = raycaster.intersectObjects(objects.filter(object => object.type !== "ground").map(item => item.mesh));
 		if (intersects.length > 0 && (currentMode === 'interact-move' || currentMode === 'interact-pinch' || currentMode === 'interact-delete')) {
 			const hoveredObject = objects.find(item => item.mesh === intersects[0].object);
 
