@@ -47,7 +47,7 @@ function init() {
 	directionalLight.castShadow = true;
 	scene.add(directionalLight);
 
-	camera.position.set(0, 5, 10);
+	camera.position.set(0, 2, 3);
 	camera.lookAt(0, 0, 0);
 
 	controls = new OrbitControls(camera, renderer.domElement);
@@ -155,6 +155,12 @@ function init() {
 
 	setMode('interact-move');
 	animate();
+
+	// Add initial objects
+	addBambooMat();
+	addNori();
+	addFish();
+	addRiceBatch();
 }
 
 function rotateSelectedObjects(angle) {
