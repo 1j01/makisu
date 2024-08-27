@@ -253,19 +253,16 @@ function rotateHeldObjects(angle) {
 
 function handleRiceCollision(event) {
 	const contact = event.contact;
-	const bodyA = contact.bi;
-	const bodyB = contact.bj;
+	const riceBody = contact.bi;
+	const otherBody = contact.bj;
 
-	const objectA = objects.find(object => object.body === bodyA);
-	const objectB = objects.find(object => object.body === bodyB);
+	const riceObject = objects.find(object => object.body === riceBody);
+	const otherObject = objects.find(object => object.body === otherBody);
 
-	if (objectA && objectB) {
-		if (objectA.type !== 'rice') {
+	if (riceObject && otherObject) {
+		if (riceObject.type !== 'rice') {
 			console.error('contact.bi doesn\'t correspond to a rice grain');
 		}
-		// TODO: remove extra variables
-		const riceObject = objectA;
-		const otherObject = objectB;
 
 		// TODO: try limiting to one constraint per PAIR of objects instead of two (one both ways), might make it more stable
 		if (
