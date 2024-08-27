@@ -129,7 +129,7 @@ body {
 }
 
 #rotate-buttons {
-	display: none;
+	display: flex;
 	position: absolute;
 	bottom: 10px;
 	left: 50%;

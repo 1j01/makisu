@@ -364,7 +364,7 @@ function onPointerDown(event) {
 			// Show rotate buttons for touch devices
 			if ('ontouchstart' in window) {
 				document.getElementById('toolbar').style.display = 'none';
-				document.getElementById('rotate-buttons').style.display = 'flex';
+				document.getElementById('rotate-buttons').style.display = '';
 			}
 		} else if (currentMode === 'interact-delete') {
 			deleteObjects(highlightedObjects);
@@ -377,7 +377,8 @@ function onPointerDown(event) {
 function deleteObjects(objectsToDelete) {
 	// Ugly, I wouldn't do it like this from first principles,
 	// I'm just fixing the AI's counting bug
-	// It would probably be better to count everything from the current state every time (adding and removing)
+	// It would probably be better to count everything from the current state every time (when adding and removing)
+	// Could improve this a bit by defining the group types in one place though
 	const isGroup = ["nori", "bamboo"].includes(objectsToDelete[0].type);
 	objectsToDelete.forEach(ingredient => {
 		scene.remove(ingredient.mesh);
@@ -404,10 +405,8 @@ function onPointerUp(event) {
 	updateCursor();
 
 	// Hide rotate buttons and show toolbar for touch devices
-	if ('ontouchstart' in window) {
-		document.getElementById('toolbar').style.display = 'flex';
-		document.getElementById('rotate-buttons').style.display = 'none';
-	}
+	document.getElementById('toolbar').style.display = '';
+	document.getElementById('rotate-buttons').style.display = 'none';
 }
 
 
