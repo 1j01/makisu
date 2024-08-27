@@ -65,12 +65,12 @@ body {
 	font-size: 14px;
 }
 
-#debug-panel {
+#settings-panel {
 	top: 10px;
 	right: 10px;
 }
 
-#debug-panel label {
+#settings-panel label {
 	margin-left: 5px;
 }
 
