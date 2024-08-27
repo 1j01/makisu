@@ -261,15 +261,24 @@ function handleRiceCollision(event) {
 		if (objectA.type !== 'rice') {
 			console.error('contact.bi doesn\'t correspond to a rice grain');
 		}
+		// TODO: remove extra variables
 		const riceObject = objectA;
 		const otherObject = objectB;
 
-		if (!riceObject.stuckObjects.has(otherObject) && riceObject.stuckObjects.size < 8) {
+		// TODO: try limiting to one constraint per PAIR of objects instead of two (one both ways), might make it more stable
+		if (
+			!riceObject.stuckObjects.has(otherObject) &&
+			riceObject.stuckObjects.size < 8 && // TODO: move this to a constant
+			// Don't stick while dragging (this is paired with explicit unsticking when starting a drag)
+			heldObjects.every(heldObject => heldObject !== otherObject && heldObject !== riceObject)
+		) {
 			const constraint = new CANNON.LockConstraint(riceObject.body, otherObject.body, {
-				// TODO: tune this value, may be ridiculously high
+				// TODO: tune this value, may be ridiculously high?
 				// The AI decided on this when first using LockConstraint in https://github.com/1j01/makisu/commit/6b6f0876b569b9a4c175901914c1672aedd37ac9
+				// Actually apparently it's the default value. I don't know what it does exactly yet. Could still play around with it.
 				maxForce: 1e6,
 			});
+			// console.log('adding constraint');
 			world.addConstraint(constraint);
 			riceObject.stuckObjects.set(otherObject, constraint);
 		}
@@ -394,13 +403,15 @@ function onPointerDown(event) {
 
 			if (heldObjects[0].type === 'rice') {
 				// Break connections between the dragged rice and other objects
-				// TODO: prevent connections from re-forming while dragging
-				heldObjects.forEach(rice => {
-					if (rice.stuckObjects) {
-						rice.stuckObjects.forEach((constraint, otherObject) => {
-							if (!heldObjects.includes(otherObject)) {
+				// Connections may be either direction, from the dragged rice to another object, or from another rice to the dragged rice
+				// So we can't only look at heldObjects' stuckObjects (unless we made it bidirectional)
+				objects.forEach(object => {
+					if (object.stuckObjects) {
+						object.stuckObjects.forEach((constraint, otherObject) => {
+							if (heldObjects.includes(otherObject) !== heldObjects.includes(object)) {
+								// console.log('removing constraint due to drag');
 								world.removeConstraint(constraint);
-								rice.stuckObjects.delete(otherObject);
+								object.stuckObjects.delete(otherObject);
 							}
 						});
 					}
@@ -627,6 +638,7 @@ function animate() {
 		if (object.stuckObjects) {
 			for (let [otherObject, constraint] of object.stuckObjects.entries()) {
 				if (constraint.equations[0].multiplier > constraintBreakThreshold) {
+					// console.log('removing constraint due to break threshold');
 					world.removeConstraint(constraint);
 					object.stuckObjects.delete(otherObject);
 				}
