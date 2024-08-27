@@ -207,12 +207,22 @@ function setMode(mode) {
 		RIGHT: THREE.MOUSE.PAN
 	};
 
+	controls.touches = {
+		ONE: THREE.TOUCH.ROTATE,
+		TWO: THREE.TOUCH.DOLLY_PAN,
+	};
+
 	if (mode === 'camera-pan') {
 		controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
+		controls.touches.ONE = THREE.TOUCH.PAN;
 	} else if (mode === 'camera-zoom') {
 		controls.mouseButtons.LEFT = THREE.MOUSE.DOLLY;
+		controls.touches.ONE = null; // there is no THREE.TOUCH.DOLLY, and DOLLY_PAN is not handled for a single touch
+		// for now, you just have to use multitouch to zoom, and this tool isn't technically useful,
+		// since you can do it with other tools selected
 	} else if (mode === 'interact-move' || mode === 'interact-pinch' || mode === 'interact-delete') {
 		controls.mouseButtons.LEFT = null;
+		controls.touches.ONE = null;
 	}
 }
 
