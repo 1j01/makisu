@@ -33,4 +33,4 @@ Features:
 - Toolbar with camera and interaction tools
 - Physics are kinda janky, but you could maybe convince yourself that you've sort of rolled a sushi roll, if you're very careful as well as undiscerning and generous with your imagination
 - Grains of rice are just spheres, and fish slices are just boxes that look like damn erasers more than sashimi
-- Some support for mobile devices
+- Mobile friendly UI
