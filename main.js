@@ -238,7 +238,7 @@ function rotateSelectedObjects(angle) {
 	}
 }
 
-function handleCollision(event) {
+function handleRiceCollision(event) {
 	const contact = event.contact;
 	const bodyA = contact.bi;
 	const bodyB = contact.bj;
@@ -247,21 +247,24 @@ function handleCollision(event) {
 	const ingredientB = sushiIngredients.find(ingredient => ingredient.body === bodyB);
 
 	if (ingredientA && ingredientB) {
-		if (ingredientA.type === 'rice' || ingredientB.type === 'rice') {
-			const riceIngredient = ingredientA.type === 'rice' ? ingredientA : ingredientB;
-			const otherIngredient = riceIngredient === ingredientA ? ingredientB : ingredientA;
+		if (ingredientA.type !== 'rice') {
+			console.error('contact.bi doesn\'t correspond to a rice grain');
+		}
+		const riceIngredient = ingredientA;
+		const otherIngredient = ingredientB;
 
-			if (!riceIngredient.stuckObjects) {
-				riceIngredient.stuckObjects = new Map();
-			}
+		if (!riceIngredient.stuckObjects) {
+			riceIngredient.stuckObjects = new Map();
+		}
 
-			if (!riceIngredient.stuckObjects.has(otherIngredient) && riceIngredient.stuckObjects.size < 8) {
-				const constraint = new CANNON.LockConstraint(riceIngredient.body, otherIngredient.body, {
-					maxForce: 1e6
-				});
-				world.addConstraint(constraint);
-				riceIngredient.stuckObjects.set(otherIngredient, constraint);
-			}
+		if (!riceIngredient.stuckObjects.has(otherIngredient) && riceIngredient.stuckObjects.size < 8) {
+			const constraint = new CANNON.LockConstraint(riceIngredient.body, otherIngredient.body, {
+				// TODO: tune this value, may be ridiculously high
+				// The AI decided on this when first using LockConstraint in https://github.com/1j01/makisu/commit/6b6f0876b569b9a4c175901914c1672aedd37ac9
+				maxForce: 1e6,
+			});
+			world.addConstraint(constraint);
+			riceIngredient.stuckObjects.set(otherIngredient, constraint);
 		}
 	}
 }
@@ -484,7 +487,7 @@ function addRice() {
 
 	riceBody.material = new CANNON.Material({ friction: 0.5, restitution: 0.1 });
 
-	riceBody.addEventListener("collide", handleCollision);
+	riceBody.addEventListener("collide", handleRiceCollision);
 
 	scene.add(riceMesh);
 	world.addBody(riceBody);
@@ -515,8 +518,6 @@ function addNori() {
 			shape: noriShape,
 			position: new CANNON.Vec3((i - segments / 2) * segmentWidth, 5, Math.random() * 2 - 1)
 		});
-
-		noriBody.addEventListener("collide", handleCollision);
 
 		if (i > 0) {
 			const constraint = new CANNON.HingeConstraint(
@@ -555,8 +556,6 @@ function addFish() {
 		position: new CANNON.Vec3(Math.random() * 2 - 1, 5, Math.random() * 2 - 1)
 	});
 
-	fishBody.addEventListener("collide", handleCollision);
-
 	scene.add(fishMesh);
 	world.addBody(fishBody);
 	sushiIngredients.push({ mesh: fishMesh, body: fishBody, type: 'fish', objectId: Date.now() });
@@ -586,9 +585,6 @@ function addBambooMat() {
 			shape: bambooShape,
 			position: new CANNON.Vec3((i - segments / 2) * segmentWidth, 5, Math.random() * 2 - 1)
 		});
-
-		// TODO: remove redundant collision event listeners; only rice sticks, only rice needs it! so dumb
-		bambooBody.addEventListener("collide", handleCollision);
 
 		if (i > 0) {
 			const constraint = new CANNON.HingeConstraint(
