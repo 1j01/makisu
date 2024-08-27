@@ -37,7 +37,7 @@ let riceSize = parseFloat(document.getElementById('rice-size').value);
 let liftHeight = parseFloat(document.getElementById('lift-height').value);
 let liftDuration = parseFloat(document.getElementById('lift-time').value);
 let liftFraction = 0; // for animating lift
-let rotationSpeed = 0.05;
+let rotationSpeed = 3; // radians per second
 const keys = {};
 
 const MAX_CONSTRAINTS_PER_GRAIN = 8;
@@ -668,7 +668,7 @@ function animate() {
 		liftFraction = Math.min(liftFraction, 1);
 
 		const realRotatingDir = Math.sign(rotatingDir + ((keys['ArrowLeft'] || keys['KeyQ']) ? -1 : 0) + ((keys['ArrowRight'] || keys['KeyE']) ? 1 : 0)); // shush! it's fine!
-		rotateHeldObjects(realRotatingDir * rotationSpeed);
+		rotateHeldObjects(realRotatingDir * rotationSpeed * deltaTime);
 
 		const intersection = new THREE.Vector3();
 		raycaster.ray.intersectPlane(groundPlane, intersection);
