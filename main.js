@@ -383,7 +383,6 @@ function onPointerDown(event) {
 	if (highlightedObjects.length > 0) {
 		if (currentMode === 'interact-move' || currentMode === 'interact-pinch') {
 			heldObjects = highlightedObjects.slice();
-			dragOffsets = [];
 			const grabbedIngredientType = heldObjects[0].type;
 
 			if (grabbedIngredientType === 'rice') {
@@ -406,9 +405,9 @@ function onPointerDown(event) {
 			// Store the initial offsets for all grabbed objects
 			const intersection = new THREE.Vector3();
 			raycaster.ray.intersectPlane(groundPlane, intersection);
-			heldObjects.forEach(object => {
+			dragOffsets = heldObjects.map(object => {
 				const offset = new THREE.Vector3().subVectors(object.mesh.position, intersection);
-				dragOffsets.push(offset);
+				return offset;
 			});
 
 			// Show rotate buttons for touch devices
