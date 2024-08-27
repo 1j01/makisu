@@ -20,7 +20,7 @@ let isDragging = false;
 let rotatingDir = 0;
 let highlightedObjects = [];
 let groundPlane;
-let dragStartOffsets = []; // bit of a misnomer, in that it's changed after drag start for rotation
+let dragOffsets = [];
 let debugVisualizationEnabled = document.getElementById('debug-toggle').checked;
 let constraintBreakThreshold = parseFloat(document.getElementById('constraint-threshold').value);
 let riceSize = parseFloat(document.getElementById('rice-size').value);
@@ -234,7 +234,7 @@ function rotateSelectedObjects(angle) {
 			obj.body.quaternion.copy(obj.mesh.quaternion);
 		});
 		// Update drag offsets
-		dragStartOffsets.forEach(offset => offset.applyQuaternion(rotationQuaternion));
+		dragOffsets.forEach(offset => offset.applyQuaternion(rotationQuaternion));
 	}
 }
 
@@ -381,7 +381,7 @@ function onPointerDown(event) {
 
 	if (highlightedObjects.length > 0) {
 		selectedObjects = highlightedObjects.slice();
-		dragStartOffsets = [];
+		dragOffsets = [];
 		const selectedIngredientType = selectedObjects[0].type;
 
 		if (currentMode === 'interact-move' || currentMode === 'interact-pinch') {
@@ -408,7 +408,7 @@ function onPointerDown(event) {
 			raycaster.ray.intersectPlane(groundPlane, intersection);
 			selectedObjects.forEach(object => {
 				const offset = new THREE.Vector3().subVectors(object.mesh.position, intersection);
-				dragStartOffsets.push(offset);
+				dragOffsets.push(offset);
 			});
 
 			// Show rotate buttons for touch devices
@@ -451,7 +451,7 @@ function onPointerUp(event) {
 	isDragging = false;
 	rotatingDir = 0;
 	selectedObjects = [];
-	dragStartOffsets = [];
+	dragOffsets = [];
 	controls.enabled = true;
 	updateCursor();
 
@@ -648,7 +648,7 @@ function animate() {
 		raycaster.ray.intersectPlane(groundPlane, intersection);
 
 		selectedObjects.forEach((object, index) => {
-			const targetPosition = new THREE.Vector3().addVectors(intersection, dragStartOffsets[index]);
+			const targetPosition = new THREE.Vector3().addVectors(intersection, dragOffsets[index]);
 			targetPosition.y += liftHeight * liftFraction;
 			object.mesh.position.copy(targetPosition);
 			object.body.position.copy(targetPosition);
