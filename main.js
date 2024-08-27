@@ -41,6 +41,7 @@ let liftFraction = 0; // for animating lift
 let rotationSpeed = 0.05;
 const keys = {};
 
+const MAX_CONSTRAINTS_PER_GRAIN = 8;
 const RICE_GRAB_RADIUS = 0.2;
 const RICE_DELETION_RADIUS = 0.3;
 
@@ -267,7 +268,7 @@ function handleRiceCollision(event) {
 		// TODO: try limiting to one constraint per PAIR of objects instead of two (one both ways), might make it more stable
 		if (
 			!riceObject.stuckObjects.has(otherObject) &&
-			riceObject.stuckObjects.size < 8 && // TODO: move this to a constant
+			riceObject.stuckObjects.size < MAX_CONSTRAINTS_PER_GRAIN &&
 			// Don't stick while dragging (this is paired with explicit unsticking when starting a drag)
 			heldObjects.every(heldObject => heldObject !== otherObject && heldObject !== riceObject)
 		) {
