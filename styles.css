@@ -23,9 +23,44 @@ body {
 	color: white;
 }
 
-#ingredient-panel {
+/* FIXME: conflation of menu and button, pointer cursor applying to whole menu */
+.circular-menu {
+	position: absolute;
 	top: 10px;
+	width: 50px;
+	height: 50px;
+	border-radius: 50%;
+	background-color: rgba(0, 0, 0, 0.7);
+	color: white;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	cursor: pointer;
+}
+
+#settings-menu,
+#settings-flyout {
+	right: 10px;
+}
+
+#add-menu,
+#add-flyout {
 	left: 10px;
+}
+
+.flyout {
+	position: absolute;
+	top: 60px;
+	background-color: rgba(0, 0, 0, 0.7);
+	color: white;
+	border-radius: 5px;
+	padding: 10px;
+	min-width: 280px;
+	display: none;
+}
+
+.flyout.active {
+	display: block;
 }
 
 #toolbar {
@@ -65,20 +100,15 @@ body {
 	font-size: 14px;
 }
 
-#settings-panel {
-	top: 10px;
-	right: 10px;
-}
-
-#settings-panel label {
-	margin-left: 5px;
-}
-
 .toolbar-divider {
 	width: 1px;
 	height: 24px;
 	background-color: white;
 	margin: 0 10px;
+}
+
+.control-row label {
+	margin: 0 5px;
 }
 
 .control-row {

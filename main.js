@@ -77,6 +77,13 @@ function init() {
 
 	groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
+	document.getElementById('settings-menu').addEventListener('click', (e) => {
+		document.getElementById('settings-flyout').classList.toggle('active');
+	});
+	document.getElementById('add-menu').addEventListener('click', (e) => {
+		document.getElementById('add-flyout').classList.toggle('active');
+	});
+
 	document.getElementById('add-rice').addEventListener('click', addRiceBatch);
 	document.getElementById('add-nori').addEventListener('click', addNori);
 	document.getElementById('add-fish').addEventListener('click', addFish);
@@ -509,6 +516,7 @@ function addBambooMat() {
 			position: new CANNON.Vec3((i - segments / 2) * segmentWidth, 5, Math.random() * 2 - 1)
 		});
 
+		// TODO: remove redundant collision event listeners; only rice sticks, only rice needs it! so dumb
 		bambooBody.addEventListener("collide", handleCollision);
 
 		if (i > 0) {
