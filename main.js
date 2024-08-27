@@ -21,8 +21,8 @@ let rotatingDir = 0;
 let highlightedObjects = [];
 let groundPlane;
 let dragStartOffsets = []; // bit of a misnomer, in that it's changed after drag start for rotation
-let constraintBreakThreshold = 1; // TODO: get default from DOM (whoops)
 let debugVisualizationEnabled = document.getElementById('debug-toggle').checked;
+let constraintBreakThreshold = parseFloat(document.getElementById('constraint-threshold').value);
 let riceSize = parseFloat(document.getElementById('rice-size').value);
 let liftHeight = parseFloat(document.getElementById('lift-height').value);
 let liftDuration = parseFloat(document.getElementById('lift-time').value);
