@@ -381,11 +381,11 @@ function onPointerDown(event) {
 	updateHover(event);
 
 	if (highlightedObjects.length > 0) {
-		heldObjects = highlightedObjects.slice();
-		dragOffsets = [];
-		const grabbedIngredientType = heldObjects[0].type;
-
 		if (currentMode === 'interact-move' || currentMode === 'interact-pinch') {
+			heldObjects = highlightedObjects.slice();
+			dragOffsets = [];
+			const grabbedIngredientType = heldObjects[0].type;
+
 			if (grabbedIngredientType === 'rice') {
 				// Break connections between the dragged rice and other objects
 				// TODO: prevent connections from re-forming while dragging
