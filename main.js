@@ -28,6 +28,7 @@ let liftHeight = parseFloat(document.getElementById('lift-height').value);
 let liftDuration = parseFloat(document.getElementById('lift-time').value);
 let liftFraction = 0; // for animating lift
 let rotationSpeed = 0.05;
+const keys = {};
 
 const RICE_SELECTION_RADIUS = 0.2;
 const RICE_DELETION_RADIUS = 0.3;
@@ -136,14 +137,12 @@ function init() {
 	renderer.domElement.addEventListener('pointerup', onPointerUp);
 	renderer.domElement.addEventListener('pointercancel', onPointerUp);
 
-	// TODO: rotate smoothly with `rotatingDir`, don't rely on key repeat
-	// also maybe handle mousewheel for rotation (could also be used for lifting...)
+	// TODO: maybe handle mousewheel for rotation (could also be used for lifting, alternatively...)
 	document.addEventListener('keydown', (e) => {
-		if (e.key === 'q' || e.key === 'Q') {
-			rotateSelectedObjects(-rotationSpeed);
-		} else if (e.key === 'e' || e.key === 'E') {
-			rotateSelectedObjects(rotationSpeed);
-		}
+		keys[e.code] = true;
+	});
+	document.addEventListener('keyup', (e) => {
+		keys[e.code] = false;
 	});
 
 	// AAAAAAAAAAAAAAAA
@@ -642,7 +641,8 @@ function animate() {
 		liftFraction += timeStep / liftDuration;
 		liftFraction = Math.min(liftFraction, 1);
 
-		rotateSelectedObjects(rotatingDir * rotationSpeed);
+		const realRotatingDir = Math.sign(rotatingDir + ((keys['ArrowLeft'] || keys['KeyQ']) ? -1 : 0) + ((keys['ArrowRight'] || keys['KeyE']) ? 1 : 0)); // shush! it's fine!
+		rotateSelectedObjects(realRotatingDir * rotationSpeed);
 
 		const intersection = new THREE.Vector3();
 		raycaster.ray.intersectPlane(groundPlane, intersection);
