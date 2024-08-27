@@ -3,12 +3,20 @@ import * as THREE from 'three';
 import { OrbitControls } from './libs/OrbitControls.js';
 import * as CANNON from './libs/cannon-es.js';
 
+/**
+ * @typedef {Object} WorldObject
+ * @property {THREE.Mesh} mesh
+ * @property {CANNON.Body} body
+ * @property {string} type
+ * @property {Map<WorldObject, CANNON.Constraint>} [stuckObjects]
+ * @property {number} objectId
+ */
+
 let scene, camera, renderer, world, controls, raycaster, mouse;
 let timeStep = 1 / 60;
 let objectIdCounter = 1;
-// TODO: change stupid "ingredient" terminology applying to all objects
-/** @type {{ mesh: THREE.Mesh, body: CANNON.Body, type: string, stuckObjects?: Map<any, CANNON.Constraint>, objectId: number }[]} */
-let sushiIngredients = [];
+/** @type {WorldObject[]} */
+let objects = [];
 let counts = {
 	rice: 0,
 	nori: 0,
@@ -16,10 +24,13 @@ let counts = {
 	bamboo: 0,
 };
 let currentMode = 'interact-move';
+/** @type {WorldObject[]} */
 let heldObjects = [];
 let rotatingDir = 0;
+/** @type {WorldObject[]} */
 let highlightedObjects = [];
 let groundPlane;
+/** @type {THREE.Vector3[]} */
 let dragOffsets = [];
 let debugVisualizationEnabled = document.getElementById('debug-toggle').checked;
 let constraintBreakThreshold = parseFloat(document.getElementById('constraint-threshold').value);
@@ -243,28 +254,28 @@ function handleRiceCollision(event) {
 	const bodyA = contact.bi;
 	const bodyB = contact.bj;
 
-	const ingredientA = sushiIngredients.find(ingredient => ingredient.body === bodyA);
-	const ingredientB = sushiIngredients.find(ingredient => ingredient.body === bodyB);
+	const objectA = objects.find(object => object.body === bodyA);
+	const objectB = objects.find(object => object.body === bodyB);
 
-	if (ingredientA && ingredientB) {
-		if (ingredientA.type !== 'rice') {
+	if (objectA && objectB) {
+		if (objectA.type !== 'rice') {
 			console.error('contact.bi doesn\'t correspond to a rice grain');
 		}
-		const riceIngredient = ingredientA;
-		const otherIngredient = ingredientB;
+		const riceObject = objectA;
+		const otherObject = objectB;
 
-		if (!riceIngredient.stuckObjects) {
-			riceIngredient.stuckObjects = new Map();
+		if (!riceObject.stuckObjects) {
+			riceObject.stuckObjects = new Map();
 		}
 
-		if (!riceIngredient.stuckObjects.has(otherIngredient) && riceIngredient.stuckObjects.size < 8) {
-			const constraint = new CANNON.LockConstraint(riceIngredient.body, otherIngredient.body, {
+		if (!riceObject.stuckObjects.has(otherObject) && riceObject.stuckObjects.size < 8) {
+			const constraint = new CANNON.LockConstraint(riceObject.body, otherObject.body, {
 				// TODO: tune this value, may be ridiculously high
 				// The AI decided on this when first using LockConstraint in https://github.com/1j01/makisu/commit/6b6f0876b569b9a4c175901914c1672aedd37ac9
 				maxForce: 1e6,
 			});
 			world.addConstraint(constraint);
-			riceIngredient.stuckObjects.set(otherIngredient, constraint);
+			riceObject.stuckObjects.set(otherObject, constraint);
 		}
 	}
 }
@@ -320,32 +331,31 @@ function updateHover(event) {
 	if (heldObjects.length === 0) {
 		highlightedObjects = [];
 
-		const intersects = raycaster.intersectObjects(sushiIngredients.map(item => item.mesh));
+		const intersects = raycaster.intersectObjects(objects.map(item => item.mesh));
 		if (intersects.length > 0 && (currentMode === 'interact-move' || currentMode === 'interact-pinch' || currentMode === 'interact-delete')) {
-			const hoveredObject = intersects[0].object;
-			const hoveredIngredient = sushiIngredients.find(item => item.mesh === hoveredObject);
+			const hoveredObject = objects.find(item => item.mesh === intersects[0].object);
 
 			if (currentMode === 'interact-move' || currentMode === 'interact-delete') {
-				if (hoveredIngredient.type === 'rice') {
+				if (hoveredObject.type === 'rice') {
 					// Target all rice grains within the appropriate radius
 					const riceSearchRadius = currentMode === 'interact-delete' ? RICE_DELETION_RADIUS : RICE_GRAB_RADIUS;
-					sushiIngredients.forEach(ingredient => {
-						if (ingredient.type === 'rice' && ingredient.mesh.position.distanceTo(hoveredObject.position) <= riceSearchRadius) {
-							highlightedObjects.push(ingredient);
+					objects.forEach(object => {
+						if (object.type === 'rice' && object.mesh.position.distanceTo(hoveredObject.mesh.position) <= riceSearchRadius) {
+							highlightedObjects.push(object);
 						}
 					});
 				} else {
 					// For other object types, target all parts of the specific logical object
-					const objectId = hoveredIngredient.objectId;
-					sushiIngredients.forEach(ingredient => {
-						if (ingredient.objectId === objectId) {
-							highlightedObjects.push(ingredient);
+					const objectId = hoveredObject.objectId;
+					objects.forEach(object => {
+						if (object.objectId === objectId) {
+							highlightedObjects.push(object);
 						}
 					});
 				}
 			} else if (currentMode === 'interact-pinch') {
 				// Target only the clicked object
-				highlightedObjects.push(hoveredIngredient);
+				highlightedObjects.push(hoveredObject);
 			}
 		}
 	}
@@ -385,17 +395,16 @@ function onPointerDown(event) {
 	if (highlightedObjects.length > 0) {
 		if (currentMode === 'interact-move' || currentMode === 'interact-pinch') {
 			heldObjects = highlightedObjects.slice();
-			const grabbedIngredientType = heldObjects[0].type;
 
-			if (grabbedIngredientType === 'rice') {
+			if (heldObjects[0].type === 'rice') {
 				// Break connections between the dragged rice and other objects
 				// TODO: prevent connections from re-forming while dragging
 				heldObjects.forEach(rice => {
 					if (rice.stuckObjects) {
-						rice.stuckObjects.forEach((constraint, otherIngredient) => {
-							if (!heldObjects.includes(otherIngredient)) {
+						rice.stuckObjects.forEach((constraint, otherObject) => {
+							if (!heldObjects.includes(otherObject)) {
 								world.removeConstraint(constraint);
-								rice.stuckObjects.delete(otherIngredient);
+								rice.stuckObjects.delete(otherObject);
 							}
 						});
 					}
@@ -431,17 +440,17 @@ function deleteObjects(objectsToDelete) {
 	// It would probably be better to count everything from the current state every time (when adding and removing)
 	// Could improve this a bit by defining the group types in one place though
 	const isGroup = ["nori", "bamboo"].includes(objectsToDelete[0].type);
-	objectsToDelete.forEach(ingredient => {
-		scene.remove(ingredient.mesh);
-		world.removeBody(ingredient.body);
+	objectsToDelete.forEach(object => {
+		scene.remove(object.mesh);
+		world.removeBody(object.body);
 		if (!isGroup) {
-			updateIngredientCounter(ingredient.type, -1);
+			updateObjectCounter(object.type, -1);
 		}
 	});
 	if (isGroup) {
-		updateIngredientCounter(objectsToDelete[0].type, -1);
+		updateObjectCounter(objectsToDelete[0].type, -1);
 	}
-	sushiIngredients = sushiIngredients.filter(ingredient => !objectsToDelete.includes(ingredient));
+	objects = objects.filter(object => !objectsToDelete.includes(object));
 }
 
 function onPointerMove(event) {
@@ -488,9 +497,9 @@ function addRice() {
 
 	scene.add(riceMesh);
 	world.addBody(riceBody);
-	sushiIngredients.push({ mesh: riceMesh, body: riceBody, type: 'rice', stuckObjects: new Map(), objectId: objectIdCounter++ });
+	objects.push({ mesh: riceMesh, body: riceBody, type: 'rice', stuckObjects: new Map(), objectId: objectIdCounter++ });
 
-	updateIngredientCounter('rice', 1);
+	updateObjectCounter('rice', 1);
 }
 
 function addNori() {
@@ -518,7 +527,7 @@ function addNori() {
 
 		if (i > 0) {
 			const constraint = new CANNON.HingeConstraint(
-				sushiIngredients[sushiIngredients.length - 1].body,
+				objects[objects.length - 1].body,
 				noriBody,
 				{
 					pivotA: new CANNON.Vec3(segmentWidth / 2, 0, 0),
@@ -532,10 +541,10 @@ function addNori() {
 
 		scene.add(noriMesh);
 		world.addBody(noriBody);
-		sushiIngredients.push({ mesh: noriMesh, body: noriBody, type: 'nori', objectId });
+		objects.push({ mesh: noriMesh, body: noriBody, type: 'nori', objectId });
 	}
 
-	updateIngredientCounter('nori', 1);
+	updateObjectCounter('nori', 1);
 }
 
 function addFish() {
@@ -555,9 +564,9 @@ function addFish() {
 
 	scene.add(fishMesh);
 	world.addBody(fishBody);
-	sushiIngredients.push({ mesh: fishMesh, body: fishBody, type: 'fish', objectId: objectIdCounter++ });
+	objects.push({ mesh: fishMesh, body: fishBody, type: 'fish', objectId: objectIdCounter++ });
 
-	updateIngredientCounter('fish', 1);
+	updateObjectCounter('fish', 1);
 }
 
 function addBambooMat() {
@@ -585,7 +594,7 @@ function addBambooMat() {
 
 		if (i > 0) {
 			const constraint = new CANNON.HingeConstraint(
-				sushiIngredients[sushiIngredients.length - 1].body,
+				objects[objects.length - 1].body,
 				bambooBody,
 				{
 					pivotA: new CANNON.Vec3(segmentWidth / 2, 0, 0),
@@ -599,13 +608,13 @@ function addBambooMat() {
 
 		scene.add(bambooMesh);
 		world.addBody(bambooBody);
-		sushiIngredients.push({ mesh: bambooMesh, body: bambooBody, type: 'bamboo', objectId });
+		objects.push({ mesh: bambooMesh, body: bambooBody, type: 'bamboo', objectId });
 	}
 
-	updateIngredientCounter('bamboo', 1);
+	updateObjectCounter('bamboo', 1);
 }
 
-function updateIngredientCounter(type, change) {
+function updateObjectCounter(type, change) {
 	counts[type] += change;
 	document.getElementById(type + '-count').textContent = counts[type];
 }
@@ -614,16 +623,16 @@ function animate() {
 	requestAnimationFrame(animate);
 	world.step(timeStep);
 
-	sushiIngredients.forEach(ingredient => {
-		ingredient.mesh.position.copy(ingredient.body.position);
-		ingredient.mesh.quaternion.copy(ingredient.body.quaternion);
+	objects.forEach(object => {
+		object.mesh.position.copy(object.body.position);
+		object.mesh.quaternion.copy(object.body.quaternion);
 
 		// Check and break constraints if necessary
-		if (ingredient.stuckObjects) {
-			for (let [otherIngredient, constraint] of ingredient.stuckObjects.entries()) {
+		if (object.stuckObjects) {
+			for (let [otherObject, constraint] of object.stuckObjects.entries()) {
 				if (constraint.equations[0].multiplier > constraintBreakThreshold) {
 					world.removeConstraint(constraint);
-					ingredient.stuckObjects.delete(otherIngredient);
+					object.stuckObjects.delete(otherObject);
 				}
 			}
 		}

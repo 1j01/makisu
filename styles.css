@@ -98,7 +98,7 @@ body {
 	margin: min(10px, 1.5vw - 4px);
 }
 
-#ingredient-counter {
+#object-counter {
 	margin-top: 10px;
 	font-size: 14px;
 }
