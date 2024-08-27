@@ -15,7 +15,6 @@ let counts = {
 };
 let currentMode = 'interact-move';
 let heldObjects = [];
-let isDragging = false; // TODO: remove this, use heldObjects.length > 0
 let rotatingDir = 0;
 let highlightedObjects = [];
 let groundPlane;
@@ -316,7 +315,7 @@ function updateHover(event) {
 		// TODO: maybe avoid unnecessary calls to setHex? not sure if it's expensive
 		highlightedObject.mesh.material.emissive.setHex(0x000000);
 	}
-	if (!isDragging) {
+	if (heldObjects.length === 0) {
 		highlightedObjects = [];
 
 		const intersects = raycaster.intersectObjects(sushiIngredients.map(item => item.mesh));
@@ -366,10 +365,10 @@ function updateCursor() {
 			renderer.domElement.style.cursor = 'zoom-in';
 			break;
 		case 'interact-move':
-			renderer.domElement.style.cursor = isDragging ? 'grabbing' : (highlightedObjects.length ? 'grab' : 'default');
+			renderer.domElement.style.cursor = heldObjects.length ? 'grabbing' : (highlightedObjects.length ? 'grab' : 'default');
 			break;
 		case 'interact-pinch':
-			renderer.domElement.style.cursor = isDragging ? 'grabbing' : (highlightedObjects.length ? 'grab' : 'default');
+			renderer.domElement.style.cursor = heldObjects.length ? 'grabbing' : (highlightedObjects.length ? 'grab' : 'default');
 			break;
 		case 'interact-delete':
 			renderer.domElement.style.cursor = highlightedObjects.length ? 'crosshair' : 'default';
@@ -402,7 +401,6 @@ function onPointerDown(event) {
 				});
 			}
 
-			isDragging = true;
 			controls.enabled = false;
 
 			// Store the initial offsets for all grabbed objects
@@ -450,7 +448,6 @@ function onPointerMove(event) {
 }
 
 function onPointerUp(event) {
-	isDragging = false;
 	rotatingDir = 0;
 	heldObjects = [];
 	dragOffsets = [];
@@ -631,7 +628,7 @@ function animate() {
 		}
 	});
 
-	if (isDragging && heldObjects.length > 0) {
+	if (heldObjects.length > 0) {
 
 		liftFraction += timeStep / liftDuration;
 		liftFraction = Math.min(liftFraction, 1);
