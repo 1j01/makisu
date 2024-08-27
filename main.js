@@ -6,7 +6,6 @@ import * as CANNON from './libs/cannon-es.js';
 let scene, camera, renderer, world, controls, raycaster, mouse;
 let timeStep = 1 / 60;
 // TODO: change stupid "ingredient" terminology applying to all objects
-// and "selected" should be "dragging"
 let sushiIngredients = [];
 let counts = {
 	rice: 0,
@@ -15,8 +14,8 @@ let counts = {
 	bamboo: 0,
 };
 let currentMode = 'interact-move';
-let selectedObjects = [];
-let isDragging = false;
+let heldObjects = [];
+let isDragging = false; // TODO: remove this, use heldObjects.length > 0
 let rotatingDir = 0;
 let highlightedObjects = [];
 let groundPlane;
@@ -30,7 +29,7 @@ let liftFraction = 0; // for animating lift
 let rotationSpeed = 0.05;
 const keys = {};
 
-const RICE_SELECTION_RADIUS = 0.2;
+const RICE_GRAB_RADIUS = 0.2;
 const RICE_DELETION_RADIUS = 0.3;
 
 function init() {
@@ -213,16 +212,16 @@ function init() {
 	addRiceBatch();
 }
 
-function rotateSelectedObjects(angle) {
-	if (selectedObjects.length > 0) {
+function rotateHeldObjects(angle) {
+	if (heldObjects.length > 0) {
 		const center = new THREE.Vector3();
-		selectedObjects.forEach(obj => center.add(obj.mesh.position));
-		center.divideScalar(selectedObjects.length);
+		heldObjects.forEach(obj => center.add(obj.mesh.position));
+		center.divideScalar(heldObjects.length);
 
 		const rotationAxis = new THREE.Vector3(0, 1, 0);
 		const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(rotationAxis, angle);
 
-		selectedObjects.forEach(obj => {
+		heldObjects.forEach(obj => {
 			const localPos = obj.mesh.position.clone().sub(center);
 			localPos.applyQuaternion(rotationQuaternion);
 
@@ -327,15 +326,15 @@ function updateHover(event) {
 
 			if (currentMode === 'interact-move' || currentMode === 'interact-delete') {
 				if (hoveredIngredient.type === 'rice') {
-					// Select all rice grains within the selection radius
-					const riceSelectionRadius = currentMode === 'interact-delete' ? RICE_DELETION_RADIUS : RICE_SELECTION_RADIUS;
+					// Target all rice grains within the appropriate radius
+					const riceSearchRadius = currentMode === 'interact-delete' ? RICE_DELETION_RADIUS : RICE_GRAB_RADIUS;
 					sushiIngredients.forEach(ingredient => {
-						if (ingredient.type === 'rice' && ingredient.mesh.position.distanceTo(hoveredObject.position) <= riceSelectionRadius) {
+						if (ingredient.type === 'rice' && ingredient.mesh.position.distanceTo(hoveredObject.position) <= riceSearchRadius) {
 							highlightedObjects.push(ingredient);
 						}
 					});
 				} else {
-					// For other object types, select all parts of the specific logical object
+					// For other object types, target all parts of the specific logical object
 					const objectId = hoveredIngredient.objectId;
 					sushiIngredients.forEach(ingredient => {
 						if (ingredient.objectId === objectId) {
@@ -344,7 +343,7 @@ function updateHover(event) {
 					});
 				}
 			} else if (currentMode === 'interact-pinch') {
-				// Select only the clicked object
+				// Target only the clicked object
 				highlightedObjects.push(hoveredIngredient);
 			}
 		}
@@ -383,18 +382,18 @@ function onPointerDown(event) {
 	updateHover(event);
 
 	if (highlightedObjects.length > 0) {
-		selectedObjects = highlightedObjects.slice();
+		heldObjects = highlightedObjects.slice();
 		dragOffsets = [];
-		const selectedIngredientType = selectedObjects[0].type;
+		const grabbedIngredientType = heldObjects[0].type;
 
 		if (currentMode === 'interact-move' || currentMode === 'interact-pinch') {
-			if (selectedIngredientType === 'rice') {
+			if (grabbedIngredientType === 'rice') {
 				// Break connections between the dragged rice and other objects
 				// TODO: prevent connections from re-forming while dragging
-				selectedObjects.forEach(rice => {
+				heldObjects.forEach(rice => {
 					if (rice.stuckObjects) {
 						rice.stuckObjects.forEach((constraint, otherIngredient) => {
-							if (!selectedObjects.includes(otherIngredient)) {
+							if (!heldObjects.includes(otherIngredient)) {
 								world.removeConstraint(constraint);
 								rice.stuckObjects.delete(otherIngredient);
 							}
@@ -406,10 +405,10 @@ function onPointerDown(event) {
 			isDragging = true;
 			controls.enabled = false;
 
-			// Store the initial offsets for all selected objects
+			// Store the initial offsets for all grabbed objects
 			const intersection = new THREE.Vector3();
 			raycaster.ray.intersectPlane(groundPlane, intersection);
-			selectedObjects.forEach(object => {
+			heldObjects.forEach(object => {
 				const offset = new THREE.Vector3().subVectors(object.mesh.position, intersection);
 				dragOffsets.push(offset);
 			});
@@ -453,7 +452,7 @@ function onPointerMove(event) {
 function onPointerUp(event) {
 	isDragging = false;
 	rotatingDir = 0;
-	selectedObjects = [];
+	heldObjects = [];
 	dragOffsets = [];
 	controls.enabled = true;
 	updateCursor();
@@ -632,18 +631,18 @@ function animate() {
 		}
 	});
 
-	if (isDragging && selectedObjects.length > 0) {
+	if (isDragging && heldObjects.length > 0) {
 
 		liftFraction += timeStep / liftDuration;
 		liftFraction = Math.min(liftFraction, 1);
 
 		const realRotatingDir = Math.sign(rotatingDir + ((keys['ArrowLeft'] || keys['KeyQ']) ? -1 : 0) + ((keys['ArrowRight'] || keys['KeyE']) ? 1 : 0)); // shush! it's fine!
-		rotateSelectedObjects(realRotatingDir * rotationSpeed);
+		rotateHeldObjects(realRotatingDir * rotationSpeed);
 
 		const intersection = new THREE.Vector3();
 		raycaster.ray.intersectPlane(groundPlane, intersection);
 
-		selectedObjects.forEach((object, index) => {
+		heldObjects.forEach((object, index) => {
 			const targetPosition = new THREE.Vector3().addVectors(intersection, dragOffsets[index]);
 			targetPosition.y += liftHeight * liftFraction;
 			object.mesh.position.copy(targetPosition);
