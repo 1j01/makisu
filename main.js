@@ -264,10 +264,6 @@ function handleRiceCollision(event) {
 		const riceObject = objectA;
 		const otherObject = objectB;
 
-		if (!riceObject.stuckObjects) {
-			riceObject.stuckObjects = new Map();
-		}
-
 		if (!riceObject.stuckObjects.has(otherObject) && riceObject.stuckObjects.size < 8) {
 			const constraint = new CANNON.LockConstraint(riceObject.body, otherObject.body, {
 				// TODO: tune this value, may be ridiculously high
