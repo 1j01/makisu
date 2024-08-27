@@ -17,10 +17,11 @@ let counts = {
 let currentMode = 'interact-move';
 let selectedObjects = [];
 let isDragging = false;
+let rotatingDir = 0;
 let highlightedObjects = [];
 let groundPlane;
-let dragStartOffsets = [];
-let constraintBreakThreshold = 1;
+let dragStartOffsets = []; // bit of a misnomer, in that it's changed after drag start for rotation
+let constraintBreakThreshold = 1; // TODO: get default from DOM (whoops)
 let debugVisualizationEnabled = document.getElementById('debug-toggle').checked;
 let riceSize = parseFloat(document.getElementById('rice-size').value);
 let liftHeight = parseFloat(document.getElementById('lift-height').value);
@@ -135,6 +136,8 @@ function init() {
 	renderer.domElement.addEventListener('pointerup', onPointerUp);
 	renderer.domElement.addEventListener('pointercancel', onPointerUp);
 
+	// TODO: rotate smoothly with `rotatingDir`, don't rely on key repeat
+	// also maybe handle mousewheel for rotation (could also be used for lifting...)
 	document.addEventListener('keydown', (e) => {
 		if (e.key === 'q' || e.key === 'Q') {
 			rotateSelectedObjects(-rotationSpeed);
@@ -143,15 +146,63 @@ function init() {
 		}
 	});
 
+	// AAAAAAAAAAAAAAAA
+	// Why is it so hard to implement a continuous effect for a button???
+
+	let pointerIdForRotation = null;
 	document.getElementById('rotate-left').addEventListener('pointerdown', (e) => {
-		e.preventDefault();
-		rotateSelectedObjects(-rotationSpeed);
+		pointerIdForRotation = e.pointerId;
+		rotatingDir = -1;
+	});
+	document.getElementById('rotate-right').addEventListener('pointerdown', (e) => {
+		pointerIdForRotation = e.pointerId;
+		rotatingDir = 1;
 	});
 
-	document.getElementById('rotate-right').addEventListener('pointerdown', (e) => {
-		e.preventDefault();
-		rotateSelectedObjects(rotationSpeed);
+	document.getElementById('rotate-left').addEventListener('pointerenter', (e) => {
+		if (e.pointerId === pointerIdForRotation) {
+			rotatingDir = -1
+		};
 	});
+	document.getElementById('rotate-right').addEventListener('pointerenter', (e) => {
+		if (e.pointerId === pointerIdForRotation) {
+			rotatingDir = 1;
+		}
+	});
+
+	// pointerleave and pointerout aren't happening until the pointer is released for some reason
+	// (do buttons implicitly capture the pointer?? well it doesn't work even if I make them not buttons... some weird multitouch thing I guess!)
+
+	document.getElementById('rotate-left').addEventListener('pointerleave', (e) => {
+		// console.log(`e.pointerId: ${e.pointerId}, pointerIdForRotation: ${pointerIdForRotation}`);
+		if (e.pointerId === pointerIdForRotation) {
+			rotatingDir = 0;
+		}
+	});
+	document.getElementById('rotate-right').addEventListener('pointerleave', (e) => {
+		if (e.pointerId === pointerIdForRotation) {
+			rotatingDir = 0;
+		}
+	});
+
+	// so I have to use pointermove to detect leaving the button :(
+	// still need the above pointerleave or pointerout for when the pointer is released
+	document.addEventListener('pointermove', (e) => {
+		// console.log(`pointermove, e.pointerId: ${e.pointerId}, pointerIdForRotation: ${pointerIdForRotation}`);
+		// console.log(`e.target.className: ${e.target.className}`);
+		// e.target also doesn't work, it stays as the button when pointer is outside the button
+		const theElement = document.elementFromPoint(e.clientX, e.clientY);
+		if (e.pointerId === pointerIdForRotation) {
+			const leftButton = document.getElementById('rotate-left');
+			const rightButton = document.getElementById('rotate-right');
+			// if (!leftButton.contains(theElement) && !rightButton.contains(theElement)) {
+			// 	rotatingDir = 0;
+			// }
+			rotatingDir = leftButton.contains(theElement) ? -1 : rightButton.contains(theElement) ? 1 : 0;
+		}
+	});
+
+	// /AAAAAAAAAAAAAAAA
 
 	setMode('interact-move');
 	animate();
@@ -399,6 +450,7 @@ function onPointerMove(event) {
 
 function onPointerUp(event) {
 	isDragging = false;
+	rotatingDir = 0;
 	selectedObjects = [];
 	dragStartOffsets = [];
 	controls.enabled = true;
@@ -589,6 +641,8 @@ function animate() {
 
 		liftFraction += timeStep / liftDuration;
 		liftFraction = Math.min(liftFraction, 1);
+
+		rotateSelectedObjects(rotatingDir * rotationSpeed);
 
 		const intersection = new THREE.Vector3();
 		raycaster.ray.intersectPlane(groundPlane, intersection);
