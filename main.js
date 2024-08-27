@@ -13,7 +13,6 @@ import * as CANNON from './libs/cannon-es.js';
  */
 
 let scene, camera, renderer, world, controls, raycaster, mouse;
-let timeStep = 1 / 60;
 let objectIdCounter = 1;
 /** @type {WorldObject[]} */
 let objects = [];
@@ -626,9 +625,26 @@ function updateObjectCounter(type, change) {
 	document.getElementById(type + '-count').textContent = counts[type];
 }
 
+let lastTime = performance.now();
 function animate() {
 	requestAnimationFrame(animate);
-	world.step(timeStep);
+
+	const now = performance.now();
+	let deltaTime = (now - lastTime) / 1000;
+	// Prevent large time steps when debugging or when the window loses focus or the computer sleeps
+	deltaTime = Math.min(deltaTime, 0.1);
+
+	// Usually smaller time steps make simulations more stable
+	// but this seems much less stable if anything!
+	// Maybe because I'm not running my game logic in each iteration in this loop
+	// const baseTimeStep = 1 / 600;
+	// let remainingSimTime = deltaTime;
+	// while (remainingSimTime > 0) {
+	// 	const simTimeStep = Math.min(remainingSimTime, baseTimeStep);
+	// 	world.step(simTimeStep);
+	// 	remainingSimTime -= simTimeStep;
+	// }
+	world.step(deltaTime);
 
 	objects.forEach(object => {
 		object.mesh.position.copy(object.body.position);
@@ -648,7 +664,7 @@ function animate() {
 
 	if (heldObjects.length > 0) {
 
-		liftFraction += timeStep / liftDuration;
+		liftFraction += deltaTime / liftDuration;
 		liftFraction = Math.min(liftFraction, 1);
 
 		const realRotatingDir = Math.sign(rotatingDir + ((keys['ArrowLeft'] || keys['KeyQ']) ? -1 : 0) + ((keys['ArrowRight'] || keys['KeyE']) ? 1 : 0)); // shush! it's fine!
@@ -671,6 +687,8 @@ function animate() {
 
 	controls.update();
 	renderer.render(scene, camera);
+
+	lastTime = now;
 }
 
 window.addEventListener('resize', () => {
