@@ -77,10 +77,26 @@ function init() {
 
 	groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
+	// I'm tired, and I'm working within a bad framework decided by the AI
+	// TODO: allow menu to open with one click while a DIFFERENT menu is open
+	let justClosed = false;
+	document.addEventListener('pointerdown', (e) => {
+		if (e.target?.closest('.flyout')) return; // allow clicking within the flyout
+		justClosed = document.querySelectorAll('.flyout.active').length > 0;
+		document.querySelectorAll('.flyout').forEach(flyout => flyout.classList.remove('active'));
+	});
+	document.addEventListener('pointerup', (e) => {
+		// pointerup comes before click, hence the timeout
+		setTimeout(() => { justClosed = false; }, 0);
+	});
 	document.getElementById('settings-menu').addEventListener('click', (e) => {
+		if (justClosed) return; // allow toggling the flyout closed
+		if (e.target?.closest('#settings-flyout')) return; // because the stupid flyout is within the button
 		document.getElementById('settings-flyout').classList.toggle('active');
 	});
 	document.getElementById('add-menu').addEventListener('click', (e) => {
+		if (justClosed) return; // allow toggling the flyout closed
+		if (e.target?.closest('#add-flyout')) return; // because the stupid flyout is within the button
 		document.getElementById('add-flyout').classList.toggle('active');
 	});
 

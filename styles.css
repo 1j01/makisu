@@ -23,7 +23,7 @@ body {
 	color: white;
 }
 
-/* FIXME: conflation of menu and button, pointer cursor applying to whole menu */
+/* FIXME: conflation of menu and button */
 .circular-menu {
 	position: absolute;
 	top: 10px;
@@ -57,6 +57,8 @@ body {
 	padding: 10px;
 	min-width: 280px;
 	display: none;
+	/* reset cursor because the stupid flyout is within the button */
+	cursor: auto;
 }
 
 .flyout.active {
