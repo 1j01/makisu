@@ -2,7 +2,7 @@
 
 ## TIC-80 version (2D / 2.5D)
 
-<!-- TODO: GIF -->
+![screen capture of attempting to roll sushi](./tic-80-screencap.gif)
 
 This is a sushi making simulator built in [TIC-80 tiny computer](http://tic80.com/), written in JavaScript.
 
@@ -21,7 +21,7 @@ Features:
 
 ## THREE.js version (3D)
 
-<!-- TODO: GIF -->
+![screen capture of attempting to roll sushi](./three-js-screencap.gif)
 
 This is a sushi making simulator using [THREE.js](https://threejs.org/), written in JavaScript.
 
