@@ -150,7 +150,16 @@ function init() {
 	renderer.domElement.addEventListener('pointerup', onPointerUp);
 	renderer.domElement.addEventListener('pointercancel', onPointerUp);
 
-	// TODO: maybe handle mousewheel for rotation (could also be used for lifting, alternatively...)
+
+	document.addEventListener('wheel', (e) => {
+		if (heldObjects.length > 0) {
+			// A different useful feature to map to mousewheel would be to adjust the lift height dynamically...
+			rotateHeldObjects(e.deltaY * 0.001);
+		} else {
+			camera.zoom += e.deltaY * 0.001;
+		}
+	});
+
 	document.addEventListener('keydown', (e) => {
 		keys[e.code] = true;
 	});
