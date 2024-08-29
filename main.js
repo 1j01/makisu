@@ -723,19 +723,25 @@ function animate() {
 	}
 
 	// Other strategies:
-	// - Fixed physics time step, blend rendering between two physics steps
+	// All involving af fixed physics time step, with a variable number of steps per frame, and accumulating the remainder time across frames.
+	// - Simply render the latest physics state.
+	//   This may lead to judder. However, it should be physically stable, since it's only using small, equal time steps.
+	// - Blend rendering between two physics steps
 	//   (https://gafferongames.com/post/fix_your_timestep/)
 	//   This introduces one frame of rendering latency, since it's blending the last two physics steps, not the current and the next,
 	//   but avoids judder from the physics time steps not aligning with frame boundaries.
 	//   Linear interpolation is not ideal for non-linear motion, but it's usually good enough,
 	//   especially with small enough physics time steps, since that limits the time over which the interpolation is done.
-	// - Fixed physics time step, simulate ahead for rendering but throw away the result (reset to the last physics step, for reproducible physics)
+	// - Simulate ahead by the remainder for rendering but throw away the result (reset to the last physics step, for reproducible physics)
 	//   This doesn't introduce latency in that way, since it's going forward from the last physics step, not blending between the last two.
-	//   Also, it's more accurate than blending, for any non-linear motion that's simulated non-linearly.
+	//   (Also, it's more accurate than blending, for any non-linear motion that's simulated non-linearly.
+	//    But most games simulate gravity by applying it at discrete times, not calculating a parabola.
+	//    Small time steps are enough for a good approximation of the continuous motion.)
 	//   However, if there's inconsistencies that occur from tiny time steps, they could show for a frame.
 	//   Also, major gameplay events like dying are best avoided in this non-authoritative simulation step,
 	//   since they could be undone if the real simulation step doesn't agree, and since it's not meant to be authoritative.
-	//   Like you don't want a game over screen popping up or a death sound effect playing due to the rendering-only simulation step.
+	//   Like you don't want a game over screen popping up or a sound effect playing due to the rendering-only simulation step.
+	//   (See this video around 2 hour mark: https://youtu.be/fdAOPHgW7qM?t=7658)
 
 	controls.update();
 	renderer.render(scene, camera);
