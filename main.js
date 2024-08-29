@@ -156,6 +156,7 @@ function init() {
 			// A different useful feature to map to mousewheel would be to adjust the lift height dynamically...
 			rotateHeldObjects(e.deltaY * 0.001);
 		} else {
+			// FIXME: this breaks the perspective once you resize the window / toggle fullscreen
 			camera.zoom += e.deltaY * 0.001;
 		}
 	});
@@ -634,25 +635,7 @@ function updateObjectCounter(type, change) {
 	document.getElementById(type + '-count').textContent = counts[type];
 }
 
-let lastTime = performance.now();
-function animate() {
-	requestAnimationFrame(animate);
-
-	const now = performance.now();
-	let deltaTime = (now - lastTime) / 1000;
-	// Prevent large time steps when debugging or when the window loses focus or the computer sleeps
-	deltaTime = Math.min(deltaTime, 0.1);
-
-	// Usually smaller time steps make simulations more stable
-	// but this seems much less stable if anything!
-	// Maybe because I'm not running my game logic in each iteration in this loop
-	// const baseTimeStep = 1 / 600;
-	// let remainingSimTime = deltaTime;
-	// while (remainingSimTime > 0) {
-	// 	const simTimeStep = Math.min(remainingSimTime, baseTimeStep);
-	// 	world.step(simTimeStep);
-	// 	remainingSimTime -= simTimeStep;
-	// }
+function step(deltaTime) {
 	world.step(deltaTime);
 
 	objects.forEach(object => {
@@ -693,6 +676,66 @@ function animate() {
 	} else {
 		liftFraction = 0;
 	}
+}
+
+let lastTime = performance.now();
+function animate() {
+	requestAnimationFrame(animate);
+
+	const now = performance.now();
+	let deltaTime = (now - lastTime) / 1000;
+	// Prevent large time steps when debugging or when the window loses focus or the computer sleeps
+	deltaTime = Math.min(deltaTime, 0.1);
+
+	// Strategy 0:
+	// Fixed time step; one step per frame.
+	// Thin objects phase through each other.
+	// step(1 / 60);
+
+	// Strategy 1:
+	// Real time; one step per frame.
+	// `deltaTime` often tends towards the limit of 0.1, making this much less stable (and not even realtime) on my computer.
+	// step(deltaTime);
+
+	// Strategy 2:
+	// Base time step repeated as needed, followed by a smaller remainder time step; variable number of steps per frame.
+	// Usually smaller time steps make simulations more stable,
+	// but this seems much less stable if anything!
+	// ~~Maybe because I'm not running my game logic in each iteration?~~
+	// No, I created `step` to wrap it and `world.step` and it's still unstable
+	// Maybe super tiny time steps cause numerical instability?
+	// const baseTimeStep = 1 / 600;
+	// let remainingSimTime = deltaTime;
+	// while (remainingSimTime > 0) {
+	// 	const simTimeStep = Math.min(remainingSimTime, baseTimeStep);
+	// 	step(simTimeStep);
+	// 	remainingSimTime -= simTimeStep;
+	// }
+
+	// Strategy 3:
+	// Real time divided into fixed number of steps per frame.
+	// This actually seems more stable
+	// So maybe it really is just the tiny time steps from the remainder approach
+	const divisions = 10;
+	const simTimeStep = deltaTime / divisions;
+	for (let i = 0; i < divisions; i++) {
+		step(simTimeStep);
+	}
+
+	// Other strategies:
+	// - Fixed physics time step, blend rendering between two physics steps
+	//   (https://gafferongames.com/post/fix_your_timestep/)
+	//   This introduces one frame of rendering latency, since it's blending the last two physics steps, not the current and the next,
+	//   but avoids judder from the physics time steps not aligning with frame boundaries.
+	//   Linear interpolation is not ideal for non-linear motion, but it's usually good enough,
+	//   especially with small enough physics time steps, since that limits the time over which the interpolation is done.
+	// - Fixed physics time step, simulate ahead for rendering but throw away the result (reset to the last physics step, for reproducible physics)
+	//   This doesn't introduce latency in that way, since it's going forward from the last physics step, not blending between the last two.
+	//   Also, it's more accurate than blending, for any non-linear motion that's simulated non-linearly.
+	//   However, if there's inconsistencies that occur from tiny time steps, they could show for a frame.
+	//   Also, major gameplay events like dying are best avoided in this non-authoritative simulation step,
+	//   since they could be undone if the real simulation step doesn't agree, and since it's not meant to be authoritative.
+	//   Like you don't want a game over screen popping up or a death sound effect playing due to the rendering-only simulation step.
 
 	controls.update();
 	renderer.render(scene, camera);
