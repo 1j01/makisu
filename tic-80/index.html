@@ -41,8 +41,8 @@
 
 		</div>
 
-		<canvas style="width: 100%; height: 100%; margin: 0 auto; display: block; image-rendering: pixelated;"
-			id="canvas" oncontextmenu="event.preventDefault()" onmousedown="window.focus()"></canvas>
+		<canvas style="width: 100%; height: 100%; margin: 0 auto; display: block; image-rendering: pixelated;" id="canvas"
+			oncontextmenu="event.preventDefault()" onmousedown="window.focus()"></canvas>
 	</div>
 
 	<div id="info"
@@ -54,9 +54,9 @@
 	</div>
 
 	<script type="text/javascript">
-		var Module = { canvas: document.getElementById('canvas'), arguments: ['../makisu.tic'] }
+		var Module = { canvas: document.getElementById('canvas'), arguments: ['../makisu.tic'] };
 
-		const gameFrame = document.getElementById('game-frame')
+		const gameFrame = document.getElementById('game-frame');
 		const displayStyle = window.getComputedStyle(gameFrame).display;
 
 		if (displayStyle === 'none') {
@@ -70,7 +70,7 @@
 					firstScriptTag = document.getElementsByTagName('script')[0]; // find the first script tag in the document
 				scriptTag.src = 'tic80.js'; // set the source of the script to your script
 				firstScriptTag.parentNode.insertBefore(scriptTag, firstScriptTag); // append the script to the DOM
-				this.remove()
+				this.remove();
 			});
 		}
 	</script>

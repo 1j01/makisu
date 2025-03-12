@@ -814,7 +814,7 @@ async function downloadVersions(versions, outputDirectory, outputFileName) {
 	const { finished } = require('stream/promises');
 	const path = require("path");
 	const { promisify } = require('util');
-	const exec = promisify(require('child_process').exec)
+	const exec = promisify(require('child_process').exec);
 
 	const downloadFile = (async (url, destination) => {
 		const res = await fetch(url);

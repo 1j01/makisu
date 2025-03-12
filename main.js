@@ -183,7 +183,7 @@ function init() {
 
 	document.getElementById('rotate-left').addEventListener('pointerenter', (e) => {
 		if (e.pointerId === pointerIdForRotation) {
-			rotatingDir = -1
+			rotatingDir = -1;
 		};
 	});
 	document.getElementById('rotate-right').addEventListener('pointerenter', (e) => {
