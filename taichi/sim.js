@@ -4,38 +4,6 @@
  * @see https://taichi-js.com/playground/mpm99
  */
 
-
-/**
- * Proof of concept helper function to create a struct-like object
- * that handles updating the uniform buffer for the struct.
- * Taichi actually supports structs with simple objects,
- * but doesn't seem to handle updates to the property values.
- * (I may be missing something, though.)
- * @param {Object} obj - Initial values for the struct
- * @param {ti.f32|ti.i32|etc.} type - Type of the struct fields
- * @returns {[Object, ti.Vector.field, {[string]: number}]} - Array containing: a proxy of the object, a vector field, and a mapping of the indices of the members by name
- */
-function struct(obj, type = ti.f32) {
-	const keys = Object.keys(obj);
-	const indices = Object.fromEntries(keys.map((key, i) => [key, i]));
-	const field = ti.Vector.field(keys.length, type, [1]);
-	field.set([0], Object.values(obj));
-	const proxy = new Proxy(
-		{},
-		{
-			get(_, key) {
-				return obj[key];
-			},
-			set(_, key, value) {
-				obj[key] = value;
-				field.set([0], Object.values(obj));
-				return true;
-			}
-		}
-	);
-	return [proxy, field, indices];
-}
-
 let main = async () => {
 	await ti.init();
 
@@ -60,7 +28,8 @@ let main = async () => {
 	let Jp = ti.field(ti.f32, [n_particles]); // plastic deformation
 	let grid_v = ti.Vector.field(2, ti.f32, [n_grid, n_grid]);
 	let grid_m = ti.field(ti.f32, [n_grid, n_grid]);
-	let [mouse, mouse_field, mouse_indices] = struct({ x: 0, y: 0, down: 0 });
+	let mouseType = ti.types.struct({ x: ti.f32, y: ti.f32, down: ti.i32 });
+	let mouse = { x: 0, y: 0, down: 0 };
 
 	let img_size = 512;
 	let image = ti.Vector.field(4, ti.f32, [img_size, img_size]);
@@ -90,11 +59,9 @@ let main = async () => {
 		image,
 		img_size,
 		group_size,
-		mouse_field,
-		mouse_indices,
 	});
 
-	let substep = ti.kernel(() => {
+	let substep = ti.kernel({ mouse: mouseType }, (mouse) => {
 		for (let I of ti.ndrange(n_grid, n_grid)) {
 			grid_v[I] = [0, 0];
 			grid_m[I] = 0;
@@ -211,8 +178,8 @@ let main = async () => {
 					new_C = new_C + 4 * inv_dx * weight * g_v.outerProduct(dpos);
 				}
 			}
-			if (mouse_field[0][mouse_indices.down]) {
-				new_v += ([mouse_field[0][mouse_indices.x], mouse_field[0][mouse_indices.y]] - 0.5) / 10.0;
+			if (mouse.down) {
+				new_v += ([mouse.x, mouse.y] - 0.5) / 10.0;
 			}
 
 			v[p] = new_v;
@@ -285,7 +252,6 @@ let main = async () => {
 		const x = (event.clientX - canvasRect.left) / canvasRect.width;
 		const y = 1 - (event.clientY - canvasRect.top) / canvasRect.height;
 		const down = Boolean(event.buttons & 1);
-		// mouse_field.set([0], [x, y, down]); // also works
 		Object.assign(mouse, { x, y, down });
 	});
 
@@ -295,7 +261,7 @@ let main = async () => {
 			return;
 		}
 		for (let i = 0; i < Math.floor(2e-3 / dt); ++i) {
-			substep();
+			substep(mouse);
 		}
 		render();
 		i = i + 1;
