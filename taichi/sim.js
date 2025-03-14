@@ -26,7 +26,8 @@ let main = async () => {
 	let C = ti.Matrix.field(2, 2, ti.f32, [n_particles]); // affine vel field
 	let F = ti.Matrix.field(2, 2, ti.f32, n_particles); // deformation gradient
 	let material = ti.field(ti.i32, [n_particles]); // material id
-	let grabbed = ti.field(ti.i32, [n_particles]); // whether held by mouse (could be merged with material id for compactness)
+	let grabbed = ti.field(ti.i32, [n_particles]); // whether held by mouse (could be merged with material id or grab offsets for compactness)
+	let grabOffsets = ti.Vector.field(2, ti.f32, [n_particles]); // offset from mouse
 	let Jp = ti.field(ti.f32, [n_particles]); // plastic deformation
 	let grid_v = ti.Vector.field(2, ti.f32, [n_grid, n_grid]);
 	let grid_m = ti.field(ti.f32, [n_grid, n_grid]);
@@ -59,6 +60,7 @@ let main = async () => {
 		F,
 		material,
 		grabbed,
+		grabOffsets,
 		Jp,
 		grid_v,
 		grid_m,
@@ -186,20 +188,16 @@ let main = async () => {
 				}
 			}
 			if (grabbed[p]) {
-				// Constants chosen by trial and error
-				// and which don't work well generally
-				// Constraints interfere with this,
-				// and mass might also come into play
-				// Not to mention that it's easy to phase things through each other
-				// and easy to break the simulation with high velocities, causing particles to disappear, possibly with NaNs
-				new_v = [mouse.deltaX, mouse.deltaY] * 500.0;
-				x[p] += [mouse.deltaX, mouse.deltaY] / 20.0;
-				// I don't understand the affine velocity field
-				// but messing about with it is a bit fun
-				// new_C = [
-				// 	[5.0, 0.0],
-				// 	[0.0, 5.0],
-				// ];
+				// FIXME: particles barely collide when grabbed
+				// matter basically phases through other matter
+				let a = x[p];
+				let b = [mouse.x, mouse.y] + grabOffsets[p];
+				let delta = b - a;
+				x[p] += delta;
+				// v[p] += 0.5 * delta;
+				// new_v = new_v + 0.5 * delta;
+				// new_v = delta;
+				new_v = [mouse.deltaX, mouse.deltaY] * img_size;
 			}
 
 			v[p] = new_v;
@@ -225,6 +223,7 @@ let main = async () => {
 		for (let p of range(n_particles)) {
 			if ((x[p][0] - mouse.x) ** 2 + (x[p][1] - mouse.y) ** 2 < 0.01) {
 				grabbed[p] = 1;
+				grabOffsets[p] = x[p] - [mouse.x, mouse.y];
 			} else {
 				grabbed[p] = 0;
 			}
