@@ -26,6 +26,7 @@ let main = async () => {
 	let C = ti.Matrix.field(2, 2, ti.f32, [n_particles]); // affine vel field
 	let F = ti.Matrix.field(2, 2, ti.f32, n_particles); // deformation gradient
 	let material = ti.field(ti.i32, [n_particles]); // material id
+	let grabbed = ti.field(ti.i32, [n_particles]); // whether held by mouse (could be merged with material id for compactness)
 	let Jp = ti.field(ti.f32, [n_particles]); // plastic deformation
 	let grid_v = ti.Vector.field(2, ti.f32, [n_grid, n_grid]);
 	let grid_m = ti.field(ti.f32, [n_grid, n_grid]);
@@ -57,6 +58,7 @@ let main = async () => {
 		C,
 		F,
 		material,
+		grabbed,
 		Jp,
 		grid_v,
 		grid_m,
@@ -183,10 +185,21 @@ let main = async () => {
 					new_C = new_C + 4 * inv_dx * weight * g_v.outerProduct(dpos);
 				}
 			}
-			if (mouse.down) {
-				if ((x[p][0] - mouse.x) ** 2 + (x[p][1] - mouse.y) ** 2 < 0.01) {
-					new_v += [mouse.deltaX, mouse.deltaY] * 2.0;
-				}
+			if (grabbed[p]) {
+				// Constants chosen by trial and error
+				// and which don't work well generally
+				// Constraints interfere with this,
+				// and mass might also come into play
+				// Not to mention that it's easy to phase things through each other
+				// and easy to break the simulation with high velocities, causing particles to disappear, possibly with NaNs
+				new_v = [mouse.deltaX, mouse.deltaY] * 500.0;
+				x[p] += [mouse.deltaX, mouse.deltaY] / 20.0;
+				// I don't understand the affine velocity field
+				// but messing about with it is a bit fun
+				// new_C = [
+				// 	[5.0, 0.0],
+				// 	[0.0, 5.0],
+				// ];
 			}
 
 			v[p] = new_v;
@@ -205,6 +218,22 @@ let main = async () => {
 		}
 		for (let p of range(n_particles)) {
 			x[p] = x[p] + dt * v[p];
+		}
+	});
+
+	let grabParticles = ti.kernel({ mouse: mouseType }, (mouse) => {
+		for (let p of range(n_particles)) {
+			if ((x[p][0] - mouse.x) ** 2 + (x[p][1] - mouse.y) ** 2 < 0.01) {
+				grabbed[p] = 1;
+			} else {
+				grabbed[p] = 0;
+			}
+		}
+	});
+
+	let releaseParticles = ti.kernel(() => {
+		for (let p of range(n_particles)) {
+			grabbed[p] = 0;
 		}
 	});
 
@@ -231,7 +260,9 @@ let main = async () => {
 				[0, 0],
 				[0, 0],
 			];
+			grabbed[i] = 0;
 		}
+
 		for (let i of range(n_constraints)) {
 			constraints[i].a = i;
 			constraints[i].b = i + 1;
@@ -291,12 +322,27 @@ let main = async () => {
 		}
 	});
 
-	window.addEventListener('pointermove', (event) => {
+	function updateMouse(event) {
 		const canvasRect = htmlCanvas.getBoundingClientRect();
 		const x = (event.clientX - canvasRect.left) / canvasRect.width;
 		const y = 1 - (event.clientY - canvasRect.top) / canvasRect.height;
 		const down = Boolean(event.buttons & 1);
 		Object.assign(mouse, { x, y, deltaX: x - mouse.x, deltaY: y - mouse.y, down });
+	}
+	window.addEventListener('pointerdown', (event) => {
+		updateMouse(event);
+		grabParticles(mouse);
+	});
+	window.addEventListener('pointermove', (event) => {
+		updateMouse(event);
+		requestAnimationFrame(() => {
+			mouse.deltaX = 0;
+			mouse.deltaY = 0;
+		});
+	});
+	window.addEventListener('pointerup', (event) => {
+		updateMouse(event);
+		releaseParticles();
 	});
 
 	let i = 0;
