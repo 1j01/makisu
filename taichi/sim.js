@@ -28,8 +28,8 @@ let main = async () => {
 	let Jp = ti.field(ti.f32, [n_particles]); // plastic deformation
 	let grid_v = ti.Vector.field(2, ti.f32, [n_grid, n_grid]);
 	let grid_m = ti.field(ti.f32, [n_grid, n_grid]);
-	let mouseType = ti.types.struct({ x: ti.f32, y: ti.f32, down: ti.i32 });
-	let mouse = { x: 0, y: 0, down: 0 };
+	let mouseType = ti.types.struct({ x: ti.f32, y: ti.f32, deltaX: ti.f32, deltaY: ti.f32, down: ti.i32 });
+	let mouse = { x: 0, y: 0, deltaX: 0, deltaY: 0, down: 0 };
 
 	let img_size = 512;
 	let image = ti.Vector.field(4, ti.f32, [img_size, img_size]);
@@ -179,7 +179,7 @@ let main = async () => {
 				}
 			}
 			if (mouse.down) {
-				new_v += ([mouse.x, mouse.y] - 0.5) / 10.0;
+				new_v += [mouse.deltaX, mouse.deltaY];
 			}
 
 			v[p] = new_v;
@@ -252,7 +252,7 @@ let main = async () => {
 		const x = (event.clientX - canvasRect.left) / canvasRect.width;
 		const y = 1 - (event.clientY - canvasRect.top) / canvasRect.height;
 		const down = Boolean(event.buttons & 1);
-		Object.assign(mouse, { x, y, down });
+		Object.assign(mouse, { x, y, deltaX: x - mouse.x, deltaY: y - mouse.y, down });
 	});
 
 	let i = 0;
