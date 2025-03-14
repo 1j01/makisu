@@ -263,8 +263,8 @@ let main = async () => {
 		}
 
 		for (let i of range(n_constraints)) {
-			constraints[i].a = i;
-			constraints[i].b = i + 1;
+			constraints[i].a = i + group_size;
+			constraints[i].b = i + 1 + group_size;
 			constraints[i].rest_length = 0.01;
 		}
 	});
