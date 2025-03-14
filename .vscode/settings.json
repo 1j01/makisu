@@ -2161,14 +2161,19 @@
 	"cSpell.words": [
 		"axonometric",
 		"Damacy",
+		"dpos",
 		"gameplay",
 		"importmap",
 		"janky",
 		"Katamari",
 		"makisu",
+		"matmul",
 		"multitouch",
+		"ndrange",
 		"nori",
 		"raycaster",
+		"substep",
+		"Taichi",
 		"Verlet"
 	]
 }
