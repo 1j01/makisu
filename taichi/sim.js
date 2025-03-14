@@ -17,10 +17,7 @@
  */
 function struct(obj, type = ti.f32) {
 	const keys = Object.keys(obj);
-	const indices = {};
-	for (let i = 0; i < keys.length; i++) {
-		indices[keys[i]] = i;
-	}
+	const indices = Object.fromEntries(keys.map((key, i) => [key, i]));
 	const field = ti.Vector.field(keys.length, type, [1]);
 	field.set([0], Object.values(obj));
 	const proxy = new Proxy(
