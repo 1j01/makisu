@@ -179,7 +179,9 @@ let main = async () => {
 				}
 			}
 			if (mouse.down) {
-				new_v += [mouse.deltaX, mouse.deltaY];
+				if ((x[p][0] - mouse.x) ** 2 + (x[p][1] - mouse.y) ** 2 < 0.01) {
+					new_v += [mouse.deltaX, mouse.deltaY] * 2.0;
+				}
 			}
 
 			v[p] = new_v;
