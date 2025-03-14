@@ -64,7 +64,7 @@
 	// "workbench.colorTheme": "Solarized Light",
 	// It seems things are mixed together in an inconsistent way...
 	// This one seems to work better, don't know why.
-	"workbench.colorTheme": "Default Light+",
+	// "workbench.colorTheme": "Default Light+",
 	// "workbench.iconTheme": "",
 	// Cystom theme inspired by sushi making:
 	// https://themes.vscode.one/theme/1j01/MBxcsPmm

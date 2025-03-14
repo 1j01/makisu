@@ -22,7 +22,6 @@ let main = async () => {
 	let Jp = ti.field(ti.f32, [n_particles]); // plastic deformation
 	let grid_v = ti.Vector.field(2, ti.f32, [n_grid, n_grid]);
 	let grid_m = ti.field(ti.f32, [n_grid, n_grid]);
-	// let mouse = { x: 0, y: 0, down: false };
 	let mouse = ti.Vector.field(3, ti.f32, [1]);
 
 	let img_size = 512;
@@ -173,7 +172,6 @@ let main = async () => {
 					new_C = new_C + 4 * inv_dx * weight * g_v.outerProduct(dpos);
 				}
 			}
-			// if (mouse.down) { new_v += [mouse.x, mouse.y]; }
 			if (mouse[0][2]) {
 				new_v += ([mouse[0][0], mouse[0][1]] - 0.5) / 10.0;
 			}
@@ -203,7 +201,6 @@ let main = async () => {
 				[0, 0],
 			];
 		}
-		// mouse.down = false; // gives an error
 	});
 
 	let render = ti.kernel(() => {
@@ -249,12 +246,6 @@ let main = async () => {
 		const x = (event.clientX - canvasRect.left) / canvasRect.width;
 		const y = 1 - (event.clientY - canvasRect.top) / canvasRect.height;
 		const down = Boolean(event.buttons & 1);
-		// fails to update the uniform
-		// mouse.x = x;
-		// mouse.y = y;
-		// mouse.down = down;
-		// mouse = { x, y, down };
-		// have to use a vector field afaik
 		mouse.set([0], [x, y, down]);
 	});
 
