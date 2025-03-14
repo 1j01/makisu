@@ -9,6 +9,7 @@ let main = async () => {
 
 	let quality = 1;
 	let n_particles = 9000 * quality ** 2;
+	let n_constraints = 1000; // for now.
 	let n_grid = 128 * quality;
 	let dx = 1 / n_grid;
 	let inv_dx = n_grid;
@@ -28,6 +29,8 @@ let main = async () => {
 	let Jp = ti.field(ti.f32, [n_particles]); // plastic deformation
 	let grid_v = ti.Vector.field(2, ti.f32, [n_grid, n_grid]);
 	let grid_m = ti.field(ti.f32, [n_grid, n_grid]);
+	let constraintType = ti.types.struct({ a: ti.i32, b: ti.i32, rest_length: ti.f32 });
+	let constraints = ti.field(constraintType, [n_constraints]);
 	let mouseType = ti.types.struct({ x: ti.f32, y: ti.f32, deltaX: ti.f32, deltaY: ti.f32, down: ti.i32 });
 	let mouse = { x: 0, y: 0, deltaX: 0, deltaY: 0, down: 0 };
 
@@ -37,6 +40,7 @@ let main = async () => {
 
 	ti.addToKernelScope({
 		n_particles,
+		n_constraints,
 		n_grid,
 		dx,
 		inv_dx,
@@ -56,6 +60,7 @@ let main = async () => {
 		Jp,
 		grid_v,
 		grid_m,
+		constraints,
 		image,
 		img_size,
 		group_size,
@@ -186,16 +191,34 @@ let main = async () => {
 
 			v[p] = new_v;
 			C[p] = new_C;
-			x[p] = x[p] + dt * new_v;
+		}
+		for (let i of range(n_constraints)) {
+			let a = constraints[i].a;
+			let b = constraints[i].b;
+			let delta = x[b] - x[a];
+			let deltaLength = ti.sqrt(delta.dot(delta));
+			let diff = (deltaLength - constraints[i].rest_length) / (deltaLength + 1e-5);
+			x[a] += 0.5 * diff * delta;
+			x[b] -= 0.5 * diff * delta;
+			v[a] += 0.5 * diff * delta;
+			v[b] -= 0.5 * diff * delta;
+		}
+		for (let p of range(n_particles)) {
+			x[p] = x[p] + dt * v[p];
 		}
 	});
 
 	let reset = ti.kernel(() => {
 		for (let i of range(n_particles)) {
 			let group_id = i32(ti.floor(i / group_size));
+			let side_length = ti.sqrt(group_size);
+			let x_in_square = ti.random();
+			let y_in_square = ti.random();
+			// let x_in_square = (i % ti.floor(side_length)) / side_length;
+			// let y_in_square = (ti.floor(i / ti.floor(side_length))) / side_length;
 			x[i] = [
-				ti.random() * 0.2 + 0.3 + 0.1 * group_id,
-				ti.random() * 0.2 + 0.05 + 0.32 * group_id,
+				x_in_square * 0.2 + 0.3 + 0.1 * group_id,
+				y_in_square * 0.2 + 0.05 + 0.32 * group_id,
 			];
 			material[i] = group_id;
 			v[i] = [0, 0];
@@ -208,6 +231,11 @@ let main = async () => {
 				[0, 0],
 				[0, 0],
 			];
+		}
+		for (let i of range(n_constraints)) {
+			constraints[i].a = i;
+			constraints[i].b = i + 1;
+			constraints[i].rest_length = 0.01;
 		}
 	});
 
@@ -227,6 +255,20 @@ let main = async () => {
 				this_color = [1, 1, 1, 1.0];
 			}
 			image[ipos] = this_color;
+		}
+		for (let i of range(n_constraints)) {
+			let a = constraints[i].a;
+			let b = constraints[i].b;
+			let pos_a = x[a];
+			let pos_b = x[b];
+			let color = [0, 1, 0, 1.0];
+			let n_pixels = 100;
+			for (let j of range(n_pixels)) {
+				let alpha = f32(j) / (n_pixels - 1);
+				let pos = pos_a * (1 - alpha) + pos_b * alpha;
+				let ipos = i32(pos * img_size);
+				image[ipos] = color;
+			}
 		}
 	});
 
